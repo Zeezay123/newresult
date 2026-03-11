@@ -1,0 +1,26 @@
+{
+   "name": "StudentDash",
+   "version": "1.0.0",
+   "type": "module",
+   "main": "index.js",
+   "scripts": {
+      "dev": "nodemon Backend/index.js",
+      "start": "node Backend/index.js"
+   },
+   "dependencies": {
+      "body-parser": "^2.2.1",
+      "class-variance-authority": "^0.7.1",
+      "cookie-parser": "^1.4.7",
+      "cors": "^2.8.5",
+      "dotenv": "^17.2.3",
+      "exceljs": "^4.4.0",
+      "express": "^5.1.0",
+      "jsonwebtoken": "^9.0.2",
+      "mssql": "^12.2.0",
+      "multer": "^2.0.2",
+      "nodemon": "^3.1.14"
+   },
+   "devDependencies": {
+      "@types/node": "^24.5.2"
+   }
+}
