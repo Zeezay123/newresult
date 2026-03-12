@@ -57,13 +57,9 @@ export const Signin = async (req, res, next) => {
 
             const result = await pool.request()
             .input('StaffCode', sql.VarChar, username)
-            .input('StaffID', sql.Int, parseInt(password))
-            .input('departmentID', sql.Int, parseInt(department))
             .query(`SELECT * FROM Level_Advisors
                  WHERE 
-                StaffCode = @StaffCode 
-                 AND StaffID = @StaffID
-                 AND departmentID = @departmentID`)      
+                StaffCode = @StaffCode`)      
                  
          
 

@@ -3,7 +3,7 @@ import { errorHandler } from '../../utils/error.js';
 
 
 export const getStudents = async(req, res, next) => {
-    const lectid = req.user.id;
+    const lectid = req.user.lectid;
 
     if(!lectid){
         return(next(403, "Lecturer ID is required"));
@@ -26,10 +26,9 @@ export const getStudents = async(req, res, next) => {
             cr.StudentID
          
             FROM course_assignment ca
-            INNER JOIN course_registrations cr ON ca.CourseID = cr.courses
-             E
+            INNER JOIN course_registration cr ON ca.CourseID = cr.CourseID
             INNER JOIN staff s ON ca.LecturerID = s.StaffID
-            WHERE s.StaffNo = @StaffCode
+            WHERE s.StaffCode = @StaffCode
                 ORDER BY cr.StudentID
             `)
     

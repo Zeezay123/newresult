@@ -62,20 +62,20 @@ export const getCourses = async (req, res, next) => {
                     ca.AssignmentStatus,
                     ses.SessionName,
                     sem.SemesterName,
-                    d.DepartmentName
-                    dis.DisciplineName
+                    d.DepartmentName,
+                    dis.Name
                 FROM dbo.staff s
                 INNER JOIN dbo.course_assignment ca ON s.StaffID = ca.LecturerID
-                INNER JOIN dbo.course c ON ca.CourseID = c.CourseID
+                INNER JOIN dbo.courses c ON ca.CourseID = c.course_id
                 LEFT JOIN dbo.sessions ses ON ca.SessionID = ses.SessionID
                 LEFT JOIN dbo.semesters sem ON ca.SemesterID = sem.SemesterID
                 LEFT JOIN dbo.appdepartment d ON ca.DepartmentID = d.DepartmentID
-                Left JOIN dbo.Disciplines dis ON ca.DisciplineID = dis.DiciplineID
+                Left JOIN dbo.Disciplines dis ON ca.DisciplineID = dis.DisciplineID
                 WHERE s.StaffNo = @StaffCode
                     AND ca.AssignmentStatus = 'assigned'
                     AND ca.SessionID = @SessionID
                     AND ca.SemesterID = @SemesterID
-                ORDER BY c.CourseCode
+                ORDER BY c.course_code
             `);
 
         res.status(200).json({

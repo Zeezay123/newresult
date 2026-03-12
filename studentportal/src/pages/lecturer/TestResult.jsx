@@ -27,7 +27,7 @@ const TestResult = () => {
 
   const fetchCourses = async () => {
     try {
-      const response = await fetch(`/api/lecturers/getcourses/${lecturerId}`, { credentials: 'include' });
+      const response = await fetch(`/api/lecturers/getcourses/`, { credentials: 'include' });
       if (response.ok) {
         const data = await response.json();
         setCourses(data.courses || []);
@@ -91,7 +91,7 @@ const handleUpload = async () =>{
   
 
     try{
-       const response = await fetch(`/api/lecturers/results/upload/${lecturerId}?courseId=${selectedCourse}&ResultType=${resultType}`, {
+       const response = await fetch(`/api/lecturers/results/upload/?courseId=${selectedCourse}&ResultType=${resultType}`, {
         method: 'POST',
         credentials: 'include',
         body: selectedFile
@@ -189,8 +189,8 @@ const formData = new FormData();
             > 
                 <option value="">Select Course</option>
                 {courses.map((course) => (
-                  <option key={course.CourseID} value={course.CourseID}>
-                    {course.CourseCode} - {course.CourseName}
+                  <option key={course.course_id} value={course.course_id}>
+                    {course.course_code} - {course.course_title}
                   </option>
                 ))}
             </Select>

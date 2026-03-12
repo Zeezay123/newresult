@@ -10,8 +10,8 @@ const [studentCount, setStudentCount] = React.useState(0)
 const lectid = useSelector((state) => state.user.id);
 
 React.useEffect(()=>{
-fetchCourseCount();
-fetchStudentCount()
+// fetchCourseCount();
+// fetchStudentCount()
 },[])
 
 const fetchCourseCount = async ()=>{

@@ -244,8 +244,8 @@ const handleApproval= async(status, courseID, staffCode)=>{
                     <tr key={submission.CourseID} className='hover:bg-gray-50'>
                       <td className='px-4 py-4'>
                         <div className='flex flex-col'>
-                          <span className='font-medium text-gray-900'>{submission.CourseCode}</span>
-                          <span className='text-sm text-gray-500'>{submission.CourseName}</span>
+                          <span className='font-medium text-gray-900'>{submission.course_code}</span>
+                          <span className='text-sm text-gray-500'>{submission.course_title}</span>
                         </div>
                       </td>
                       <td className='px-4 py-4 text-sm'>{submission.LecturerName}</td>
@@ -318,7 +318,7 @@ const handleApproval= async(status, courseID, staffCode)=>{
               <div className='grid grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200'>
                 <div>
                   <p className='text-sm text-gray-500'>Course</p>
-                  <p className='font-semibold text-gray-900'>{selectedSubmission[0].CourseCode} - {selectedSubmission[0].CourseName}</p>
+                  <p className='font-semibold text-gray-900'>{selectedSubmission[0].course_code} - {selectedSubmission[0].course_title}</p>
                 </div>
                 <div>
                   <p className='text-sm text-gray-500'>Lecturer</p>

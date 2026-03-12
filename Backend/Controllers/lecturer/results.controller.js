@@ -60,28 +60,31 @@ export const downloadResultTemplate = async (req, res, next) => {
             .query(`
                 SELECT 
                     s.StudentID,
-                    s.MatricNo,
+                    s.MatNo,
                     s.LastName,
                     s.OtherNames,
-                    c.CourseCode,
-                    c.CourseName,
-                    c.CreditUnits,
+                    c.course_code,
+                    c.course_title,
+                    c.credit_unit,
                     ses.SessionName,
                     sem.SemesterName,
                     d.DepartmentName,
                     l.LevelName
-                FROM dbo.course_registration cr
-                INNER JOIN dbo.student s ON cr.StudentID = s.StudentID
-                INNER JOIN dbo.course c ON cr.CourseID = c.CourseID
-                LEFT JOIN dbo.sessions ses ON cr.SessionID = ses.SessionID
+                FROM dbo.course_registrations cr
+                INNER JOIN dbo.Student s ON cr.mat_no = s.MatNo
+                INNER JOIN dbo.courses c ON c.course_id = @CourseID
+                LEFT JOIN dbo.sessions ses ON cr.session = ses.SessionID
                 LEFT JOIN dbo.semesters sem ON cr.SemesterID = sem.SemesterID
-                LEFT JOIN dbo.appdepartment d ON s.DepartmentID = d.DepartmentID
+                LEFT JOIN dbo.AppDepartment d ON s.department = d.DepartmentID
                 LEFT JOIN dbo.levels l ON s.LevelID = l.LevelID
-                WHERE cr.CourseID = @CourseID
-                    AND cr.SessionID = @SessionID
+                WHERE EXISTS (
+                    SELECT 1
+                    FROM STRING_SPLIT(CAST(ISNULL(cr.courses, '') AS NVARCHAR(MAX)), ',') AS registeredCourse
+                    WHERE TRY_CAST(LTRIM(RTRIM(registeredCourse.value)) AS INT) = @CourseID
+                )
+                    AND cr.session = @SessionID
                     AND cr.SemesterID = @SemesterID
-                    AND cr.RegistrationStatus = 'registered'
-                ORDER BY s.MatricNo
+                ORDER BY s.MatNo
             `);
 
         if (result.recordset.length === 0) {
@@ -98,7 +101,7 @@ export const downloadResultTemplate = async (req, res, next) => {
         // Set column widths
         worksheet.columns = [
             { header: 'S/N', key: 'sn', width: 8 },
-            { header: 'Matric Number', key: 'matricNo', width: 20 },
+            { header: 'Matric Number', key: 'MatNo', width: 20 },
             { header: 'Name', key: 'Name', width: 50 },
             { header: 'Test Score (30)', key: 'testScore', width: 15 },
             { header: 'Exam Score (70)', key: 'examScore', width: 15 },
@@ -119,11 +122,11 @@ export const downloadResultTemplate = async (req, res, next) => {
         worksheet.getRow(1).height = 25;
 
         // Add course information at the top (insert rows before data)
-        worksheet.insertRow(1, ['Course Code:', courseInfo.CourseCode]);
-        worksheet.insertRow(2, ['Course Name:', courseInfo.CourseName]);
+        worksheet.insertRow(1, ['Course Code:', courseInfo.course_code]);
+        worksheet.insertRow(2, ['Course Name:', courseInfo.course_title]);
         worksheet.insertRow(3, ['Session:', courseInfo.SessionName]);
         worksheet.insertRow(4, ['Semester:', courseInfo.SemesterName]);
-        worksheet.insertRow(5, ['Credit Units:', courseInfo.CreditUnits]);
+        worksheet.insertRow(5, ['Credit Units:', courseInfo.credit_unit]);
         worksheet.insertRow(6, ['Department Name:', courseInfo.DepartmentName]);
         worksheet.insertRow(7, []); // Empty row
 
@@ -137,7 +140,7 @@ export const downloadResultTemplate = async (req, res, next) => {
         students.forEach((student, index) => {
             const row = worksheet.addRow({
                 sn: index + 1,
-                matricNo: student.MatricNo,
+                MatNo: student.MatNo,
                 Name: student.LastName + ' ' + student.OtherNames,
                 testScore: '',
                 examScore: '',
@@ -249,12 +252,13 @@ export const uploadResults = async (req, res, next) => {
         }
 
         const { courseId, ResultType } = req.query;
-        const lectid = req.params.id;
+        const lectid = req.user.id;
         let ResultStatus = 'Test';
         
 
         if(ResultType !== 'Test'){
        ResultStatus = 'Pending'
+    
         }
 
         if (!lectid) {
@@ -366,7 +370,7 @@ export const uploadResults = async (req, res, next) => {
                 // Get StudentID from MatricNo
                 const studentResult = await transaction.request()
                     .input('MatricNo', sql.VarChar, result.matricNo)
-                    .query('SELECT MatricNo FROM dbo.student WHERE MatricNo = @MatricNo');
+                    .query('SELECT MatNo FROM dbo.student WHERE MatNo = @MatricNo');
 
                 if (studentResult.recordset.length === 0) {
                     errors.push({ matricNo: result.matricNo, error: 'Student not found' });
@@ -386,7 +390,7 @@ export const uploadResults = async (req, res, next) => {
                     SELECT SemesterID FROM dbo.semesters WHERE SemesterName = @SemesterName
                 `);
 
-                const MatricNo = studentResult.recordset[0].MatricNo;
+                const MatricNo = studentResult.recordset[0].MatNo;
                 const sessId = UploadSession.recordset[0].SessionID;
                 const semId = UploadSemester.recordset[0].SemesterID;
 
@@ -436,6 +440,7 @@ export const uploadResults = async (req, res, next) => {
                         UPDATE dbo.results
                         SET Exam_Score = @ExamScore,
                             ResultType = @ResultType,
+                            ResultStatus = @ResultStatus,
                             SubmittedDate = GETDATE(),
                             SubmittedBy = @lectid
                         WHERE ResultID = @ResultID
@@ -447,6 +452,7 @@ export const uploadResults = async (req, res, next) => {
                         .input('TestScore', sql.Decimal(5, 2), result.testScore)
                         .input('ExamScore', sql.Decimal(5, 2), result.examScore)
                         .input('ResultType', sql.VarChar, ResultType)
+                        .input('ResultStatus', sql.VarChar, ResultStatus)
                         .input('lectid', sql.VarChar, lectid)
 
                         // .input('TotalScore', sql.Decimal(5, 2), result.totalScore)
@@ -458,11 +464,16 @@ export const uploadResults = async (req, res, next) => {
                     const idandlevel = await transaction.request()
                     .input('MatricNO', sql.VarChar, MatricNo)
                     .query(`
-                    SELECT StudentID, LevelID FROM dbo.student WHERE MatricNo = @MatricNO
+                    SELECT StudentID, LevelID FROM dbo.student WHERE MatNo = @MatricNO
                     `);
                     const studentId = idandlevel.recordset[0].StudentID;
                     const levelId = idandlevel.recordset[0].LevelID;
+
+                    console.log('StudentID:', studentId, 'LevelID:', levelId);
+                 
+                 
                     // Insert new result
+
                     await transaction.request()
                         .input('MatricNo', sql.VarChar, MatricNo)
                         .input('CourseID', sql.Int, courseId)
@@ -508,14 +519,14 @@ export const uploadResults = async (req, res, next) => {
         }
 
     } catch (error) {
-        console.error('Error uploading results:', error);
+        console.error('Error uploading results:', error.stack);
         return next(errorHandler(500, "Error uploading results: " + error.message));
     }
 };
 
 
 export const getUploadedResults = async (req, res, next) => {
-    const lectid = req.params.lectid;
+    const lectid = req.user.id;
     const { courseID, search } = req.query;
 
 if (!lectid) {
@@ -580,7 +591,7 @@ try {
    r.ResultType
 
     FROM dbo.results r
-    LEFT JOIN dbo.student s ON r.MatricNo = s.MatricNo
+    LEFT JOIN dbo.student s ON r.MatricNo = s.MatNo
     LEFT JOIN dbo.levels l ON s.LevelID = l.LevelID
 
     WHERE r.CourseID = @CourseID
@@ -617,9 +628,11 @@ try {
 
 
 export const updateScoreById = async(req, res, next) => {
-    const lectid = req.params.lectid;
+    const lectid = req.user.id;
     const { MatricNo, CA_Score, Exam_Score, SessionID, SemesterID, CourseID } = req.body;
 
+
+    console.log(CourseID,MatricNo,SessionID,SemesterID,CA_Score,Exam_Score)
     if(!lectid){
         return next(errorHandler(403, "Lecturer ID and Matric Number are required"));
     }
@@ -632,10 +645,13 @@ export const updateScoreById = async(req, res, next) => {
         }
        
         const checkType = await pool.request()
+
         .input('MatricNo', sql.VarChar, MatricNo)
         .input('CourseID', sql.Int, parseInt(CourseID))
         .input('SessionID', sql.Int, parseInt(SessionID))
         .input('SemesterID', sql.Int, parseInt(SemesterID))
+        .input('lectid', sql.VarChar, lectid)
+        
         .query(`SELECT ResultType, ResultStatus FROM dbo.results 
             WHERE MatricNo = @MatricNo 
                 AND CourseID = @CourseID
@@ -643,6 +659,8 @@ export const updateScoreById = async(req, res, next) => {
                 AND SemesterID = @SemesterID
                 AND SubmittedBy = @lectid
         `);
+
+        console.log(checkType.recordset[0])
 
         if(checkType.recordset[0].ResultType === 'Exam'  && (checkType.recordset[0].ResultStatus === 'Submitted' || checkType.recordset[0].ResultStatus === 'Approved')){
            
@@ -687,7 +705,7 @@ export const updateScoreById = async(req, res, next) => {
 
 
 export const submitResultsToHOD = async(req, res, next) => {
-    const lectid = req.params.lectid;
+    const lectid = req.user.id;
     const { courseID} = req.body;
     const ResultType = req.query.ResultType
 
@@ -753,13 +771,13 @@ export const submitResultsToHOD = async(req, res, next) => {
             .query(`
                 SELECT 
                 ca.AssignmentID,
-                s.StaffCode 
+                s.StaffNo 
 
                 FROM dbo.course_assignment ca
                 
                 INNER JOIN dbo.staff s ON ca.LecturerID = s.StaffID
                 
-                WHERE s.StaffCode = @lectid 
+                WHERE s.StaffNo = @lectid 
                     AND CourseID = @CourseID 
                     AND SessionID = @SessionID 
                     AND SemesterID = @SemesterID

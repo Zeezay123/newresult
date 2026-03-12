@@ -29,10 +29,10 @@ const upload = multer({
 });
 
 router.get('/download-template', VerifyUser, downloadResultTemplate);
-router.post('/upload/:id', VerifyUser, upload.single('file'), uploadResults);
-router.get('/getUploadedResults/:lectid', VerifyUser, getUploadedResults);
-router.put('/updateResult/:lectid', VerifyUser, updateScoreById);
-router.put('/submitToHOD/:lectid', VerifyUser, submitResultsToHOD);
+router.post('/upload/', VerifyUser, upload.single('file'), uploadResults);
+router.get('/getUploadedResults/', VerifyUser, getUploadedResults);
+router.put('/updateResult/', VerifyUser, updateScoreById);
+router.put('/submitToHOD/', VerifyUser, submitResultsToHOD);
 router.get('/testResults/:id', VerifyUser, getTestResults);
 router.get('/editResults/:id', VerifyUser, getTestResults);
 

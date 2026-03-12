@@ -123,18 +123,18 @@ export const getResults = async (req, res, next) => {
             SELECT 
             r.MatricNo,
             r.CourseID,
-            c.CreditUnits,
-            c.CourseCode,
-            c.CourseType,
+            c.credit_unit,
+            c.course_code,
+            c.course_type,
             p.ProgrammeName,
             l.LevelName
             
             
             FROM dbo.results r
-            INNER JOIN dbo.course c ON r.CourseID = c.CourseID
+            INNER JOIN dbo.courses c ON r.CourseID = c.course_id
             INNER JOIN dbo.levels l ON r.LevelID = l.LevelID
-            INNER JOIN dbo.programmes p ON c.ProgrammeID = p.ProgrammeID
-            WHERE l.LevelID = @LevelID AND c.ProgrammeID = @ProgrammeID AND c.CourseType = 'core'
+            INNER JOIN dbo.programmes p ON c.programme_is = p.ProgrammeID
+            WHERE l.LevelID = @LevelID AND c.programme_id = @ProgrammeID AND c.course_type = 'C'
             AND r.SessionID = @SessionID AND r.SemesterID = @SemesterID
             AND r.ResultType = 'Exam' AND r.ResultStatus = 'Approved'
             AND r.Grade = 'F'
@@ -186,21 +186,21 @@ export const getResults = async (req, res, next) => {
             r.MatricNo,
             r.CourseID,
             r.StudentID,    
-            c.CreditUnits,
-            c.CourseCode,
-            c.CourseType,
+            c.credit_unit,
+            c.course_code,
+            c.course_type,
             p.ProgrammeName,
             l.LevelName
 
 
              FROM dbo.results r
-            INNER JOIN dbo.course c ON r.CourseID = c.CourseID
+            INNER JOIN dbo.courses c ON r.CourseID = c.course_id
             INNER JOIN dbo.levels l ON r.LevelID = l.LevelID
-            INNER JOIN dbo.student s ON r.MatricNo = s.MatricNo
-            INNER JOIN dbo.programmes p ON c.ProgrammeID = p.ProgrammeID
-            WHERE l.LevelID = @LevelID AND c.ProgrammeID = @ProgrammeID AND c.CourseType = 'core'
+            INNER JOIN dbo.student s ON r.MatricNo = s.MatNo
+            INNER JOIN dbo.programmes p ON c.programme_id = p.ProgrammeID
+            WHERE l.LevelID = @LevelID AND c.programme_id = @ProgrammeID AND c.CourseType = 'C'
             AND r.SessionID = @SessionID AND r.SemesterID = @SemesterID
-            AND s.DepartmentID = @DepartmentID
+            AND s.department = @DepartmentID
             AND r.ResultType = 'Exam' AND r.ResultStatus = 'Approved'
             AND r.Grade = 'F'
             
@@ -219,14 +219,7 @@ export const getResults = async (req, res, next) => {
         whereConditions.push('s.DepartmentID = @DepartmentID');
         whereConditions.push('s.LevelID = @AssignedLevelID');
         whereConditions.push('r.ResultStatus = \'Approved\''); 
-          whereConditions.push(`(
-      (s.DepartmentID = @DepartmentID AND c.CourseCategory = 'department')
-      OR 
-      (s.DepartmentID = @DepartmentID AND c.CourseCategory = 'faculty' 
-       AND c.FacultyID IN (SELECT FacultyID FROM dbo.appdepartment WHERE DepartmentID = @DepartmentID))
-      OR 
-      (s.DepartmentID = @DepartmentID AND c.CourseCategory = 'general')
-    )`);
+          whereConditions.push(`s.department = @DepartmentID`);
         
 
         
@@ -235,9 +228,9 @@ export const getResults = async (req, res, next) => {
             SELECT 
                 r.MatricNo,
                 r.CourseID,
-                c.CourseCode,
-                c.CourseName,
-                c.CreditUnits,
+                c.course_code,
+                c.course_title,
+                c.credit_unit,
                 sem.SemesterName,
                 ses.SessionName,
                 l.LevelName,
@@ -254,8 +247,8 @@ export const getResults = async (req, res, next) => {
                 gpa.CGPA
 
             FROM dbo.results r
-            INNER JOIN dbo.student s ON r.MatricNo = s.MatricNo
-            INNER JOIN dbo.course c ON r.CourseID = c.CourseID
+            INNER JOIN dbo.student s ON r.MatricNo = s.MatNo
+            INNER JOIN dbo.courses c ON r.CourseID = c.course_id
             INNER JOIN dbo.levels l ON r.LevelID = l.LevelID
             INNER JOIN dbo.sessions ses ON r.SessionID = ses.SessionID
             INNER JOIN dbo.semesters sem ON r.SemesterID = sem.SemesterID
@@ -263,9 +256,8 @@ export const getResults = async (req, res, next) => {
             WHERE ${whereConditions.join(' AND ')}
             
             AND r.SessionID = gpa.SessionID 
-            ORDER BY r.MatricNo, c.CourseCode
+            ORDER BY r.MatricNo, c.course_code
             
-       
           
            
         `;
@@ -381,18 +373,18 @@ export const viewResults = async (req, res, next) => {
         r.TotalScore,
         r.Grade,
         r.Remarks,
-        c.CourseCode,
-        c.CourseName,
+        c.course_code,
+        c.course_title,
         CONCAT(staff.LastName, ' ', staff.OtherNames) AS LecturerName,
         l.LevelName
 
       FROM dbo.results r
 
-        INNER JOIN dbo.course c ON r.CourseID = c.CourseID
+        INNER JOIN dbo.courses c ON r.CourseID = c.course_id
       INNER JOIN dbo.levels l ON r.LevelID = l.LevelID
-      INNER JOIN dbo.staff staff ON r.SubmittedBy = staff.StaffCode
+      INNER JOIN dbo.staff staff ON r.SubmittedBy = staff.StaffNo
       INNER JOIN dbo.sessions ses ON r.SessionID = ses.SessionID
-      INNER JOIN dbo.student s ON r.MatricNo = s.MatricNo
+      INNER JOIN dbo.student s ON r.MatricNo = s.MatNo
       
       WHERE r.CourseID = @courseID
         AND ses.isActive = 1
@@ -401,15 +393,8 @@ export const viewResults = async (req, res, next) => {
         AND r.ResultType = 'Exam'
         AND r.ResultStatus = 'Approved'
         AND s.LevelID = @AssignedLevelID
-        AND s.DepartmentID = @departmentId
-        
-        
-        AND ((s.DepartmentID = @departmentId AND c.CourseCategory = 'department')
-       OR 
-       (s.DepartmentID = @departmentId AND c.CourseCategory = 'faculty' 
-       AND c.FacultyID IN (SELECT FacultyID FROM dbo.appdepartment WHERE DepartmentID = @departmentId))
-      OR 
-      (s.DepartmentID = @departmentId AND c.CourseCategory = 'general'))
+        AND s.Department = @departmentId
+     
 
       ORDER BY r.MatricNo
    `
@@ -486,16 +471,16 @@ export const downloadResults = async (req, res, next) => {
             r.TotalScore,
             r.Grade,
             r.Remarks,
-            c.CourseCode,
-            c.CourseName,
+            c.course_code,
+            c.course_title,
             CONCAT(staff.LastName, ' ', staff.OtherNames) AS LecturerName,
             l.LevelName
         FROM dbo.results r
-        INNER JOIN dbo.course c ON r.CourseID = c.CourseID
+        INNER JOIN dbo.courses c ON r.CourseID = c.course_id
         INNER JOIN dbo.levels l ON r.LevelID = l.LevelID
-        INNER JOIN dbo.staff staff ON r.SubmittedBy = staff.StaffCode
+        INNER JOIN dbo.staff staff ON r.SubmittedBy = staff.StaffNo
         INNER JOIN dbo.sessions ses ON r.SessionID = ses.SessionID
-        INNER JOIN dbo.student s ON r.MatricNo = s.MatricNo
+        INNER JOIN dbo.student s ON r.MatricNo = s.MatNo
         WHERE r.CourseID = @courseID
             AND ses.isActive = 1
             AND r.SubmittedBy = @StaffCode
@@ -503,10 +488,6 @@ export const downloadResults = async (req, res, next) => {
             AND r.ResultStatus = 'Approved'
             AND s.LevelID = @AssignedLevelID
             AND s.DepartmentID = @departmentId
-            AND ((s.DepartmentID = @departmentId AND c.CourseCategory = 'department')
-                OR (s.DepartmentID = @departmentId AND c.CourseCategory = 'faculty' 
-                    AND c.FacultyID IN (SELECT FacultyID FROM dbo.appdepartment WHERE DepartmentID = @departmentId))
-                OR (s.DepartmentID = @departmentId AND c.CourseCategory = 'general'))
         ORDER BY r.MatricNo
         `;
 
@@ -730,11 +711,8 @@ export const approveResults = async(req, res, next)=>{
                 AND r.ResultType = 'Exam'
                 AND r.ResultStatus = 'Approved'
                 AND s.LevelID = @AssignedLevelID
-                AND s.DepartmentID = @DepartmentID
-                AND ((s.DepartmentID = @DepartmentID AND c.CourseCategory = 'department')
-                    OR (s.DepartmentID = @DepartmentID AND c.CourseCategory = 'faculty' 
-                        AND c.FacultyID IN (SELECT FacultyID FROM dbo.appdepartment WHERE DepartmentID = @DepartmentID))
-                    OR (s.DepartmentID = @DepartmentID AND c.CourseCategory = 'general'))
+                AND s.Department = @DepartmentID
+               
         `;
 
         const result = await pool.request()
@@ -820,33 +798,33 @@ export const getPreviousCumulativeResults = async (req, res, next) => {
         // This includes all approved results BEFORE the current active semester
         const query = `
             SELECT 
-                s.MatricNo,
+                s.MatNo,
                 s.LastName,
                 s.OtherNames,
-                SUM(CASE WHEN c.CourseType = 'core' THEN c.CreditUnits ELSE 0 END) AS TotalCoreUnits,
-                SUM(c.CreditUnits) AS TotalUnitsTaken,
-                SUM(CASE WHEN r.Grade != 'F' THEN c.CreditUnits ELSE 0 END) AS TotalUnitsPassed,
-                SUM(r.GradePoint * c.CreditUnits) AS CumulativeGradePoints,
+                SUM(CASE WHEN c.course_type = 'C' THEN c.credit_unit ELSE 0 END) AS TotalCoreUnits,
+                SUM(c.credit_unit) AS TotalUnitsTaken,
+                SUM(CASE WHEN r.Grade != 'F' THEN c.credit_unit ELSE 0 END) AS TotalUnitsPassed,
+                SUM(r.GradePoint * c.credit_unit) AS CumulativeGradePoints,
                 CASE 
-                    WHEN SUM(c.CreditUnits) > 0 
-                    THEN CAST(SUM(r.GradePoint * c.CreditUnits) / SUM(c.CreditUnits) AS DECIMAL(3,2))
+                    WHEN SUM(c.credit_unit) > 0 
+                    THEN CAST(SUM(r.GradePoint * c.credit_unit) / SUM(c.credit_unit) AS DECIMAL(3,2))
                     ELSE 0.00
                 END AS CGPA,
-                SUM(CASE WHEN c.CourseType = 'core' AND r.Grade = 'F' THEN c.CreditUnits ELSE 0 END) AS CoreUnitsFailed
+                SUM(CASE WHEN c.course_type = 'C' AND r.Grade = 'F' THEN c.credit_unit ELSE 0 END) AS CoreUnitsFailed
             FROM dbo.student s
-            LEFT JOIN dbo.results r ON s.MatricNo = r.MatricNo
-            LEFT JOIN dbo.course c ON r.CourseID = c.CourseID
+            LEFT JOIN dbo.results r ON s.MatNo = r.MatricNo
+            LEFT JOIN dbo.courses c ON r.CourseID = c.course_id
             WHERE s.LevelID = @LevelID
                 AND s.ProgrammeID = @ProgrammeID
-                AND s.DepartmentID = @DepartmentID
+                AND s.Department = @DepartmentID
                 AND r.ResultStatus = 'Approved'
                 AND r.ResultType = 'Exam'
                 AND (
                     r.SessionID < @ActiveSessionID
                     OR (r.SessionID = @ActiveSessionID AND r.SemesterID < @ActiveSemesterID)
                 )
-            GROUP BY s.MatricNo, s.LastName, s.OtherNames
-            ORDER BY s.MatricNo
+            GROUP BY s.MatNo, s.LastName, s.OtherNames
+            ORDER BY s.MatNo
         `;
 
         const result = await pool.request()
@@ -931,24 +909,24 @@ export const getCurrentSemesterCourses = async (req, res, next) => {
                 r.MatricNo,
                 s.LastName,
                 s.OtherNames,
-                c.CourseCode,
-                c.CourseName,
-                c.CourseType,
-                c.CreditUnits,
+                c.course_code,
+                c.course_title,
+                c.course_type,
+                c.credit_unit,
                 r.TotalScore,
                 r.Grade,
                 r.GradePoint
             FROM dbo.results r
-            INNER JOIN dbo.student s ON r.MatricNo = s.MatricNo
-            INNER JOIN dbo.course c ON r.CourseID = c.CourseID
+            INNER JOIN dbo.student s ON r.MatricNo = s.MatNo
+            INNER JOIN dbo.courses c ON r.CourseID = c.course_id
             WHERE s.LevelID = @LevelID
                 AND s.ProgrammeID = @ProgrammeID
-                AND s.DepartmentID = @DepartmentID
+                AND s.Department = @DepartmentID
                 AND r.SessionID = @SessionID
                 AND r.SemesterID = @SemesterID
                 AND r.ResultStatus = 'Approved'
                 AND r.ResultType = 'Exam'
-            ORDER BY r.MatricNo, c.CourseCode
+            ORDER BY r.MatricNo, c.course_code
         `;
 
         const result = await pool.request()
@@ -1052,44 +1030,44 @@ export const getSemesterSummary = async (req, res, next) => {
         // Get both current semester and cumulative stats
         const query = `
             SELECT 
-                s.MatricNo,
+                s.MatNo,
                 s.LastName,
                 s.OtherNames,
                 -- Current Semester Stats
-                SUM(CASE WHEN r.SessionID = @SessionID AND r.SemesterID = @SemesterID THEN c.CreditUnits ELSE 0 END) AS CurrentSemesterUnits,
-                SUM(CASE WHEN r.SessionID = @SessionID AND r.SemesterID = @SemesterID AND r.Grade != 'F' THEN c.CreditUnits ELSE 0 END) AS CurrentSemesterUnitsPassed,
-                SUM(CASE WHEN r.SessionID = @SessionID AND r.SemesterID = @SemesterID THEN r.GradePoint * c.CreditUnits ELSE 0 END) AS CurrentSemesterGradePoints,
+                SUM(CASE WHEN r.SessionID = @SessionID AND r.SemesterID = @SemesterID THEN c.credit_unit ELSE 0 END) AS CurrentSemesterUnits,
+                SUM(CASE WHEN r.SessionID = @SessionID AND r.SemesterID = @SemesterID AND r.Grade != 'F' THEN c.credit_unit ELSE 0 END) AS CurrentSemesterUnitsPassed,
+                SUM(CASE WHEN r.SessionID = @SessionID AND r.SemesterID = @SemesterID THEN r.GradePoint * c.credit_unit ELSE 0 END) AS CurrentSemesterGradePoints,
                 CASE 
-                    WHEN SUM(CASE WHEN r.SessionID = @SessionID AND r.SemesterID = @SemesterID THEN c.CreditUnits ELSE 0 END) > 0
-                    THEN CAST(SUM(CASE WHEN r.SessionID = @SessionID AND r.SemesterID = @SemesterID THEN r.GradePoint * c.CreditUnits ELSE 0 END) / 
-                         SUM(CASE WHEN r.SessionID = @SessionID AND r.SemesterID = @SemesterID THEN c.CreditUnits ELSE 0 END) AS DECIMAL(3,2))
+                    WHEN SUM(CASE WHEN r.SessionID = @SessionID AND r.SemesterID = @SemesterID THEN c.credit_unit ELSE 0 END) > 0
+                    THEN CAST(SUM(CASE WHEN r.SessionID = @SessionID AND r.SemesterID = @SemesterID THEN r.GradePoint * c.credit_unit ELSE 0 END) / 
+                         SUM(CASE WHEN r.SessionID = @SessionID AND r.SemesterID = @SemesterID THEN c.credit_unit ELSE 0 END) AS DECIMAL(3,2))
                     ELSE 0.00
                 END AS CurrentGPA,
-                SUM(CASE WHEN r.SessionID = @SessionID AND r.SemesterID = @SemesterID AND c.CourseType = 'core' AND r.Grade = 'F' THEN c.CreditUnits ELSE 0 END) AS CurrentCoreUnitsFailed,
+                SUM(CASE WHEN r.SessionID = @SessionID AND r.SemesterID = @SemesterID AND c.course_type = 'C' AND r.Grade = 'F' THEN c.credit_unit ELSE 0 END) AS CurrentCoreUnitsFailed,
                 -- Cumulative Stats (including current semester)
-                SUM(c.CreditUnits) AS CumulativeUnits,
-                SUM(CASE WHEN r.Grade != 'F' THEN c.CreditUnits ELSE 0 END) AS CumulativeUnitsPassed,
-                SUM(r.GradePoint * c.CreditUnits) AS CumulativeGradePoints,
+                SUM(c.credit_unit) AS CumulativeUnits,
+                SUM(CASE WHEN r.Grade != 'F' THEN c.credit_unit ELSE 0 END) AS CumulativeUnitsPassed,
+                SUM(r.GradePoint * c.credit_unit) AS CumulativeGradePoints,
                 CASE 
-                    WHEN SUM(c.CreditUnits) > 0
-                    THEN CAST(SUM(r.GradePoint * c.CreditUnits) / SUM(c.CreditUnits) AS DECIMAL(3,2))
+                    WHEN SUM(c.credit_unit) > 0
+                    THEN CAST(SUM(r.GradePoint * c.credit_unit) / SUM(c.credit_unit) AS DECIMAL(3,2))
                     ELSE 0.00
                 END AS CGPA,
-                SUM(CASE WHEN c.CourseType = 'core' AND r.Grade = 'F' THEN c.CreditUnits ELSE 0 END) AS CumulativeCoreUnitsFailed
+                SUM(CASE WHEN c.course_type = 'C' AND r.Grade = 'F' THEN c.credit_unit ELSE 0 END) AS CumulativeCoreUnitsFailed
             FROM dbo.student s
-            LEFT JOIN dbo.results r ON s.MatricNo = r.MatricNo
-            LEFT JOIN dbo.course c ON r.CourseID = c.CourseID
+            LEFT JOIN dbo.results r ON s.MatNo = r.MatricNo
+            LEFT JOIN dbo.courses c ON r.CourseID = c.course_id
             WHERE s.LevelID = @LevelID
-                AND s.ProgrammeID = @ProgrammeID
-                AND s.DepartmentID = @DepartmentID
+                AND s.programmeID = @ProgrammeID
+                AND s.Department = @DepartmentID
                 AND r.ResultStatus = 'Approved'
                 AND r.ResultType = 'Exam'
                 AND (
                     r.SessionID < @SessionID
                     OR (r.SessionID = @SessionID AND r.SemesterID <= @SemesterID)
                 )
-            GROUP BY s.MatricNo, s.LastName, s.OtherNames
-            ORDER BY s.MatricNo
+            GROUP BY s.MatNo, s.LastName, s.OtherNames
+            ORDER BY s.MatNo
         `;
 
         const result = await pool.request()
@@ -1178,24 +1156,24 @@ export const getPreviousSemesterCarryovers = async (req, res, next) => {
                 r.MatricNo,
                 s.LastName,
                 s.OtherNames,
-                c.CourseCode,
-                c.CourseName,
-                c.CreditUnits,
+                c.course_code,
+                c.course_title,
+                c.credit_unit,
                 r.TotalScore,
                 r.Grade
             FROM dbo.results r
-            INNER JOIN dbo.student s ON r.MatricNo = s.MatricNo
-            INNER JOIN dbo.course c ON r.CourseID = c.CourseID
+            INNER JOIN dbo.student s ON r.MatricNo = s.MatNo
+            INNER JOIN dbo.courses c ON r.CourseID = c.course_id
             WHERE s.LevelID = @LevelID
                 AND s.ProgrammeID = @ProgrammeID
-                AND s.DepartmentID = @DepartmentID
+                AND s.department = @DepartmentID
                 AND r.SessionID = @PreviousSessionID
                 AND r.SemesterID = @PreviousSemesterID
-                AND c.CourseType = 'core'
+                AND c.course_type = 'C'
                 AND r.Grade = 'F'
                 AND r.ResultStatus = 'Approved'
                 AND r.ResultType = 'Exam'
-            ORDER BY r.MatricNo, c.CourseCode
+            ORDER BY r.MatricNo, c.course_code
         `;
 
         const result = await pool.request()
@@ -1350,24 +1328,21 @@ export const approveLevelResults = async(req,res,next)=>{
                 AdvisorApprovedDate = GETDATE(),
                 AdvisorApprovedBy = @StaffCode
             FROM dbo.results r
-            INNER JOIN dbo.student s ON r.MatricNo = s.MatricNo
-            INNER JOIN dbo.course c ON r.CourseID = c.CourseID
+            INNER JOIN dbo.student s ON r.MatricNo = s.MatNo
+            INNER JOIN dbo.course c ON r.CourseID = c.course_id
             WHERE s.LevelID = @LevelID
                 AND s.ProgrammeID = @ProgrammeID
-                AND s.DepartmentID = @DepartmentID
+                AND s.department = @DepartmentID
                 AND r.SessionID = @SessionID
                 AND r.SemesterID = @SemesterID
                 AND r.ResultType = 'Exam'
                 AND r.ResultStatus = 'Approved'
                 AND r.Advisor = 'Pending'
-                AND ((s.DepartmentID = @DepartmentID AND c.CourseCategory = 'department')
-                    OR (s.DepartmentID = @DepartmentID AND c.CourseCategory = 'faculty' 
-                        AND c.FacultyID IN (SELECT FacultyID FROM dbo.appdepartment WHERE DepartmentID = @DepartmentID)))
-                   
+                
         `;
 
         const result = await pool.request()
-            .input('StaffCode', sql.VarChar, StaffCode)
+            .input('StaffCode', sql.VarChar, StaffCode) 
             .input('LevelID', sql.Int, assignedLevelID)
             .input('ProgrammeID', sql.Int, assignedProgrammeID)
             .input('DepartmentID', sql.Int, parseInt(departmentId))
@@ -1456,10 +1431,10 @@ export const rejectLevelResults = async(req,res,next)=>{
         const checkQuery = `
             SELECT COUNT(*) AS PendingCount
             FROM dbo.results r
-            INNER JOIN dbo.student s ON r.MatricNo = s.MatricNo
+            INNER JOIN dbo.student s ON r.MatricNo = s.MatNo
             WHERE s.LevelID = @LevelID
                 AND s.ProgrammeID = @ProgrammeID
-                AND s.DepartmentID = @DepartmentID
+                AND s.department = @DepartmentID
                 AND r.SessionID = @SessionID
                 AND r.SemesterID = @SemesterID
                 AND r.ResultType = 'Exam'
@@ -1490,20 +1465,17 @@ export const rejectLevelResults = async(req,res,next)=>{
                 r.AdvisorRejectedDate = GETDATE(),
                 r.AdvisorRejectedBy = @StaffCode
             FROM dbo.results r
-            INNER JOIN dbo.student s ON r.MatricNo = s.MatricNo
-            INNER JOIN dbo.course c ON r.CourseID = c.CourseID
+            INNER JOIN dbo.student s ON r.MatricNo = s.MatNo
+            INNER JOIN dbo.courses c ON r.CourseID = c.course_id
             WHERE s.LevelID = @LevelID
                 AND s.ProgrammeID = @ProgrammeID
-                AND s.DepartmentID = @DepartmentID
+                AND s.department = @DepartmentID
                 AND r.SessionID = @SessionID
                 AND r.SemesterID = @SemesterID
                 AND r.ResultType = 'Exam'
                 AND r.ResultStatus = 'Approved'
                 AND r.Advisor = 'Pending'
-                AND ((s.DepartmentID = @DepartmentID AND c.CourseCategory = 'department')
-                    OR (s.DepartmentID = @DepartmentID AND c.CourseCategory = 'faculty' 
-                        AND c.FacultyID IN (SELECT FacultyID FROM dbo.appdepartment WHERE DepartmentID = @DepartmentID)))
-                 
+               
         `;
 
         const result = await pool.request()
@@ -1606,30 +1578,30 @@ export const downloadLevelResults = async(req,res,next)=>{
         // 1. Get Previous Cumulative Results (excluding current semester)
         const prevCumulativeQuery = `
             SELECT 
-                s.MatricNo,
-                SUM(CASE WHEN c.CourseType = 'core' THEN c.CreditUnits ELSE 0 END) as TotalCoreUnits,
-                SUM(c.CreditUnits) AS TotalUnitsTaken,
-                SUM(CASE WHEN r.Grade != 'F' THEN c.CreditUnits ELSE 0 END) AS TotalUnitsPassed,
-                SUM(r.GradePoint * c.CreditUnits) AS CumulativeGradePoints,
+                s.MatNo,
+                SUM(CASE WHEN c.course_type = 'C' THEN c.credit_unit ELSE 0 END) as TotalCoreUnits,
+                SUM(c.credit_unit) AS TotalUnitsTaken,
+                SUM(CASE WHEN r.Grade != 'F' THEN c.credit_unit ELSE 0 END) AS TotalUnitsPassed,
+                SUM(r.GradePoint * c.credit_unit) AS CumulativeGradePoints,
                 CASE 
-                    WHEN SUM(c.CreditUnits) > 0 
-                    THEN CAST(SUM(r.GradePoint * c.CreditUnits) / SUM(c.CreditUnits) AS DECIMAL(3,2))
+                    WHEN SUM(c.credit_unit) > 0 
+                    THEN CAST(SUM(r.GradePoint * c.credit_unit) / SUM(c.credit_unit) AS DECIMAL(3,2))
                     ELSE 0.00 
                 END AS CGPA,
-                SUM(CASE WHEN c.CourseType = 'core' AND r.Grade = 'F' THEN c.CreditUnits ELSE 0 END) AS CoreUnitsFailed
+                SUM(CASE WHEN c.course_type = 'C' AND r.Grade = 'F' THEN c.credit_unit ELSE 0 END) AS CoreUnitsFailed
             FROM dbo.student s
-            LEFT JOIN dbo.results r ON s.MatricNo = r.MatricNo
-            LEFT JOIN dbo.course c ON r.CourseID = c.CourseID
+            LEFT JOIN dbo.results r ON s.MatNo = r.MatricNo
+            LEFT JOIN dbo.courses c ON r.CourseID = c.course_id
             WHERE s.LevelID = @LevelID
                 AND s.ProgrammeID = @ProgrammeID
-                AND s.DepartmentID = @DepartmentID
+                AND s.department = @DepartmentID
                 AND r.ResultStatus = 'Approved'
                 AND r.ResultType = 'Exam'
                 AND (r.SessionID < @SessionID 
                     OR (r.SessionID = @SessionID AND r.SemesterID < @SemesterID))
-            GROUP BY s.MatricNo
-            HAVING SUM(c.CreditUnits) > 0
-            ORDER BY s.MatricNo
+            GROUP BY s.MatNo
+            HAVING SUM(c.credit_unit) > 0
+            ORDER BY s.MatNo
         `;
 
         const prevCumulativeResult = await pool.request()
@@ -1645,24 +1617,24 @@ export const downloadLevelResults = async(req,res,next)=>{
         // 2. Get Current Semester Courses with Grades
         const currentCoursesQuery = `
             SELECT 
-                s.MatricNo,
-                c.CourseCode,
-                c.CourseName,
-                c.CreditUnits,
-                c.CourseType,
+                s.MatNo,
+                c.course_code,
+                c.course_title,
+                c.credit_unit,
+                c.course_type,
                 r.TotalScore,
                 r.Grade
             FROM dbo.student s
-            INNER JOIN dbo.results r ON s.MatricNo = r.MatricNo
-            INNER JOIN dbo.course c ON r.CourseID = c.CourseID
+            INNER JOIN dbo.results r ON s.MatNo = r.MatricNo
+            INNER JOIN dbo.course c ON r.CourseID = c.course_id
             WHERE s.LevelID = @LevelID
                 AND s.ProgrammeID = @ProgrammeID
-                AND s.DepartmentID = @DepartmentID
+                AND s.department = @DepartmentID
                 AND r.SessionID = @SessionID
                 AND r.SemesterID = @SemesterID
                 AND r.ResultType = 'Exam'
                 AND r.ResultStatus = 'Approved'
-            ORDER BY s.MatricNo, c.CourseCode
+            ORDER BY s.MatNo, c.course_code
         `;
 
         const currentCoursesResult = await pool.request()
@@ -1678,38 +1650,38 @@ export const downloadLevelResults = async(req,res,next)=>{
         // 3. Get Semester Summary
         const summaryQuery = `
             SELECT 
-                s.MatricNo,
+                s.MatNo,
                 CONCAT(s.LastName, ' ', s.OtherNames) AS FullName,
-                SUM(CASE WHEN r.SessionID = @SessionID AND r.SemesterID = @SemesterID THEN c.CreditUnits ELSE 0 END) AS CurrentSemesterUnits,
-                SUM(CASE WHEN r.SessionID = @SessionID AND r.SemesterID = @SemesterID AND r.Grade != 'F' THEN c.CreditUnits ELSE 0 END) AS CurrentSemesterUnitsPassed,
-                SUM(CASE WHEN r.SessionID = @SessionID AND r.SemesterID = @SemesterID THEN r.GradePoint * c.CreditUnits ELSE 0 END) AS CurrentSemesterGradePoints,
+                SUM(CASE WHEN r.SessionID = @SessionID AND r.SemesterID = @SemesterID THEN c.credit_unit ELSE 0 END) AS CurrentSemesterUnits,
+                SUM(CASE WHEN r.SessionID = @SessionID AND r.SemesterID = @SemesterID AND r.Grade != 'F' THEN c.credit_unit ELSE 0 END) AS CurrentSemesterUnitsPassed,
+                SUM(CASE WHEN r.SessionID = @SessionID AND r.SemesterID = @SemesterID THEN r.GradePoint * c.credit_unit ELSE 0 END) AS CurrentSemesterGradePoints,
                 CASE 
-                    WHEN SUM(CASE WHEN r.SessionID = @SessionID AND r.SemesterID = @SemesterID THEN c.CreditUnits ELSE 0 END) > 0
-                    THEN CAST(SUM(CASE WHEN r.SessionID = @SessionID AND r.SemesterID = @SemesterID THEN r.GradePoint * c.CreditUnits ELSE 0 END) / 
-                         SUM(CASE WHEN r.SessionID = @SessionID AND r.SemesterID = @SemesterID THEN c.CreditUnits ELSE 0 END) AS DECIMAL(3,2))
+                    WHEN SUM(CASE WHEN r.SessionID = @SessionID AND r.SemesterID = @SemesterID THEN c.credit_unit ELSE 0 END) > 0
+                    THEN CAST(SUM(CASE WHEN r.SessionID = @SessionID AND r.SemesterID = @SemesterID THEN r.GradePoint * c.credit_Units ELSE 0 END) / 
+                         SUM(CASE WHEN r.SessionID = @SessionID AND r.SemesterID = @SemesterID THEN c.credit_unit ELSE 0 END) AS DECIMAL(3,2))
                     ELSE 0.00
                 END AS CurrentGPA,
-                SUM(CASE WHEN r.SessionID = @SessionID AND r.SemesterID = @SemesterID AND c.CourseType = 'core' AND r.Grade = 'F' THEN c.CreditUnits ELSE 0 END) AS CurrentCoreUnitsFailed,
-                SUM(c.CreditUnits) AS CumulativeUnits,
-                SUM(CASE WHEN r.Grade != 'F' THEN c.CreditUnits ELSE 0 END) AS CumulativeUnitsPassed,
-                SUM(r.GradePoint * c.CreditUnits) AS CumulativeGradePoints,
+                SUM(CASE WHEN r.SessionID = @SessionID AND r.SemesterID = @SemesterID AND c.course_type = 'C' AND r.Grade = 'F' THEN c.credit_unit ELSE 0 END) AS CurrentCoreUnitsFailed,
+                SUM(c.credit_unit) AS CumulativeUnits,
+                SUM(CASE WHEN r.Grade != 'F' THEN c.credit_unit ELSE 0 END) AS CumulativeUnitsPassed,
+                SUM(r.GradePoint * c.credit_unit) AS CumulativeGradePoints,
                 CASE 
-                    WHEN SUM(c.CreditUnits) > 0
-                    THEN CAST(SUM(r.GradePoint * c.CreditUnits) / SUM(c.CreditUnits) AS DECIMAL(3,2))
+                    WHEN SUM(c.credit_unit) > 0
+                    THEN CAST(SUM(r.GradePoint * c.credit_unit) / SUM(c.credit_unit) AS DECIMAL(3,2))
                     ELSE 0.00
                 END AS CGPA,
-                SUM(CASE WHEN c.CourseType = 'core' AND r.Grade = 'F' THEN c.CreditUnits ELSE 0 END) AS CumulativeCoreUnitsFailed
+                SUM(CASE WHEN c.course_type = 'C' AND r.Grade = 'F' THEN c.credit_unit ELSE 0 END) AS CumulativeCoreUnitsFailed
             FROM dbo.student s
-            LEFT JOIN dbo.results r ON s.MatricNo = r.MatricNo
-            LEFT JOIN dbo.course c ON r.CourseID = c.CourseID
+            LEFT JOIN dbo.results r ON s.MatNo = r.MatricNo
+            LEFT JOIN dbo.courses c ON r.CourseID = c.course_id
             WHERE s.LevelID = @LevelID
                 AND s.ProgrammeID = @ProgrammeID
-                AND s.DepartmentID = @DepartmentID
+                AND s.Department = @DepartmentID
                 AND r.ResultStatus = 'Approved'
                 AND r.ResultType = 'Exam'
                 AND (r.SessionID < @SessionID OR (r.SessionID = @SessionID AND r.SemesterID <= @SemesterID))
-            GROUP BY s.MatricNo, s.LastName, s.OtherNames
-            ORDER BY s.MatricNo
+            GROUP BY s.MatNo, s.LastName, s.OtherNames
+            ORDER BY s.MatNo
         `;
 
         const summaryResult = await pool.request()
@@ -1727,23 +1699,23 @@ export const downloadLevelResults = async(req,res,next)=>{
         if (inactiveSemesterID) {
             const carryoversQuery = `
                 SELECT 
-                    s.MatricNo,
-                    c.CourseCode,
-                    c.CourseName,
-                    c.CreditUnits
+                    s.MatNo,
+                    c.course_code,
+                    c.course_title,
+                    c.credit_unit
                 FROM dbo.student s
-                INNER JOIN dbo.results r ON s.MatricNo = r.MatricNo
-                INNER JOIN dbo.course c ON r.CourseID = c.CourseID
+                INNER JOIN dbo.results r ON s.MatNo = r.MatricNo
+                INNER JOIN dbo.courses c ON r.CourseID = c.course_id
                 WHERE s.LevelID = @LevelID
                     AND s.ProgrammeID = @ProgrammeID
-                    AND s.DepartmentID = @DepartmentID
+                    AND s.Department = @DepartmentID
                     AND r.SessionID = @SessionID
                     AND r.SemesterID = @InactiveSemesterID
                     AND r.ResultType = 'Exam'
                     AND r.ResultStatus = 'Approved'
-                    AND c.CourseType = 'core'
+                    AND c.course_type = 'C'
                     AND r.Grade = 'F'
-                ORDER BY s.MatricNo, c.CourseCode
+                ORDER BY s.MatNo, c.course_code
             `;
 
             const carryoversResult = await pool.request()
@@ -1806,7 +1778,7 @@ export const downloadLevelResults = async(req,res,next)=>{
         previousCumulative.forEach((student, index) => {
             const row = sheet1.addRow([
                 index + 1,
-                student.MatricNo,
+                student.MatNo,
                 student.TotalCoreUnits || 0,
                 student.TotalUnitsTaken || 0,
                 student.TotalUnitsPassed || 0,
@@ -1831,21 +1803,21 @@ export const downloadLevelResults = async(req,res,next)=>{
         const studentCoursesMap = new Map();
 
         currentCourses.forEach(course => {
-            const key = course.CourseCode;
+            const key = course.course_code;
             if (!courseMap.has(key)) {
                 courseMap.set(key, {
-                    CourseCode: course.CourseCode,
-                    CourseName: course.CourseName,
-                    CreditUnits: course.CreditUnits,
-                    CourseType: course.CourseType
+                    CourseCode: course.course_code,
+                    CourseName: course.course_title,
+                    CreditUnits: course.credit_unit,
+                    CourseType: course.course_type
                 });
                 uniqueCourses.push(key);
             }
 
-            if (!studentCoursesMap.has(course.MatricNo)) {
-                studentCoursesMap.set(course.MatricNo, {});
+            if (!studentCoursesMap.has(course.MatNo)) {
+                studentCoursesMap.set(course.MatNo, {});
             }
-            studentCoursesMap.get(course.MatricNo)[course.CourseCode] = `${course.TotalScore}${course.Grade}`;
+            studentCoursesMap.get(course.MatNo)[course.course_code] = `${course.TotalScore}${course.Grade}`;
         });
 
         // Sort courses by course code

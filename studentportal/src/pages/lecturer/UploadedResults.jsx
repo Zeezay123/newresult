@@ -77,7 +77,7 @@ const UploadedResults = () => {
 
   const fetchCourses = async () => {
     try {
-      const response = await fetch(`/api/lecturers/getcourses/${lectid}`, { credentials: 'include' })
+      const response = await fetch(`/api/lecturers/getcourses/`, { credentials: 'include' })
       if (response.ok) {
         const data = await response.json()
         setCourses(data.courses || [])
@@ -96,7 +96,7 @@ const UploadedResults = () => {
     if (debouncedSearchTerm) params.append('search', debouncedSearchTerm)
 
     try {
-      const response = await fetch(`/api/lecturers/results/getUploadedResults/${lectid}?${params.toString()}`, {
+      const response = await fetch(`/api/lecturers/results/getUploadedResults/?${params.toString()}`, {
         credentials: 'include'
       })
       
@@ -130,7 +130,7 @@ const UploadedResults = () => {
     if (!selectedResult) return alert('No result selected')
 
     try {
-      const response = await fetch(`/api/lecturers/results/updateResult/${lectid}`, {
+      const response = await fetch(`/api/lecturers/results/updateResult/`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -182,8 +182,8 @@ const UploadedResults = () => {
         
         // API call to submit results to HOD
         const url = ResultType
-          ? `/api/lecturers/results/submitToHOD/${lectid}?ResultType=Test`
-          : `/api/lecturers/results/submitToHOD/${lectid}?ResultType=Exam`
+          ? `/api/lecturers/results/submitToHOD/?ResultType=Test`
+          : `/api/lecturers/results/submitToHOD/?ResultType=Exam`
 
         const response = await fetch(url, {
           method: 'PUT',
@@ -307,8 +307,8 @@ const UploadedResults = () => {
             >
               <option value="">Select Course</option>
               {courses.map((course) => (
-                <option key={course.CourseID} value={course.CourseID}>
-                  {course.CourseCode} - {course.CourseName}
+                <option key={course.course_id} value={course.course_id}>
+                  {course.course_code} - {course.course_title}
                 </option>
               ))}
             </Select>

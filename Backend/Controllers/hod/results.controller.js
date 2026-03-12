@@ -49,12 +49,7 @@ export const getALLExamResults = async (req, res, next) => {
     whereConditions.push(`r.SessionID = @activeSessionID`);
     whereConditions.push(`r.SemesterID = @activeSemesterID`);
     whereConditions.push(`(
-      (s.DepartmentID = @HodId AND c.CourseCategory = 'department')
-      OR 
-      (s.DepartmentID = @HodId AND c.CourseCategory = 'faculty' 
-       AND c.FacultyID IN (SELECT FacultyID FROM dbo.appdepartment WHERE DepartmentID = @HodId))
-      OR 
-      (s.DepartmentID = @HodId AND c.CourseCategory = 'general')
+      s.department = @HodId
     )`);
     
     const params = []
@@ -74,7 +69,7 @@ export const getALLExamResults = async (req, res, next) => {
     }
 
     if (search) {
-      filtersClause += `AND (c.CourseCode LIKE @param${paramIndex} OR c.CourseName LIKE @param${paramIndex}) `
+      filtersClause += `AND (c.course_code LIKE @param${paramIndex} OR c.course_title LIKE @param${paramIndex}) `
       params.push({ name: `param${paramIndex}`, type: sql.VarChar, value: `%${search}%` });
       paramIndex++;
     }
@@ -83,8 +78,8 @@ export const getALLExamResults = async (req, res, next) => {
 SELECT 
 COUNT(DISTINCT r.MatricNo) as StudentCount,  
 r.CourseID,
-c.CourseCode,
-c.CourseName,
+c.course_code,
+c.course_title,
 r.semesterID,
 l.LevelName,
 r.sessionID,
@@ -93,19 +88,19 @@ r.ResultStatus,
 CONCAT(staff.LastName, ' ', staff.OtherNames) AS LecturerName
 
 FROM dbo.results r
-INNER JOIN dbo.course c ON r.CourseID = c.CourseID
-INNER JOIN dbo.staff staff ON r.SubmittedBy = staff.StaffCode
+INNER JOIN dbo.courses c ON r.CourseID = c.course_id
+INNER JOIN dbo.staff staff ON r.SubmittedBy = staff.StaffNo
 INNER JOIN dbo.sessions ses ON r.SessionID = ses.SessionID
 INNER JOIN dbo.semesters sem ON r.SemesterID = sem.SemesterID
 INNER JOIN dbo.levels l ON r.LevelID = l.LevelID
-INNER JOIN dbo.student s ON r.MatricNo = s.MatricNo
+INNER JOIN dbo.student s ON r.MatricNo = s.MatNo
 
 WHERE ${whereConditions.join(' AND ')}
 ${filtersClause}
 
-GROUP BY r.CourseID, c.CourseCode, c.CourseName, r.semesterID, l.LevelName, 
+GROUP BY r.CourseID, c.course_code, c.course_title, r.semesterID, l.LevelName, 
          r.sessionID, CONCAT(staff.LastName, ' ', staff.OtherNames), r.SubmittedBy, r.ResultStatus
-ORDER BY c.CourseCode`;
+ORDER BY c.course_code`;
 
   const request = pool.request()
     .input('HodId', sql.Int, parseInt(HodId))
@@ -170,16 +165,11 @@ export const getTestResults = async (req, res, next) => {
    
     const whereConditions = [`1=1`];
     whereConditions.push(`r.ResultType = 'Test'`);
-    whereConditions.push(`r.ResultStatus = 'Pending'`);
+    whereConditions.push(`r.ResultStatus = 'Test'`);
     whereConditions.push(`r.SessionID = @activeSessionID`);
     whereConditions.push(`r.SemesterID = @activeSemesterID`);
     whereConditions.push(`(
-      (s.DepartmentID = @HodId AND c.CourseCategory = 'department')
-      OR 
-      (s.DepartmentID = @HodId AND c.CourseCategory = 'faculty' 
-       AND c.FacultyID IN (SELECT FacultyID FROM dbo.appdepartment WHERE DepartmentID = @HodId))
-      OR 
-      (s.DepartmentID = @HodId AND c.CourseCategory = 'general')
+      s.Department = @HodId
     )`);
 
     
@@ -202,7 +192,7 @@ export const getTestResults = async (req, res, next) => {
     }
 
     if (search) {
-      filtersClause += `AND (c.CourseCode LIKE @param${paramIndex} OR c.CourseName LIKE @param${paramIndex}) `
+      filtersClause += `AND (c.course_code LIKE @param${paramIndex} OR c.course_title LIKE @param${paramIndex}) `
       params.push({ name: `param${paramIndex}`, type: sql.VarChar, value: `%${search}%` });
       paramIndex++;
     }
@@ -214,8 +204,8 @@ export const getTestResults = async (req, res, next) => {
 SELECT 
 COUNT(DISTINCT r.MatricNo) as StudentCount,  
 r.CourseID,
-c.CourseCode,
-c.CourseName,
+c.course_code,
+c.course_title,
 r.semesterID,
 l.LevelName,
 r.sessionID, 
@@ -224,19 +214,19 @@ r.SubmittedBy,
 CONCAT(staff.LastName, ' ', staff.OtherNames) AS LecturerName
 
 FROM dbo.results r
-INNER JOIN dbo.course c ON r.CourseID = c.CourseID
-INNER JOIN dbo.staff staff ON r.SubmittedBy = staff.StaffCode
+INNER JOIN dbo.courses c ON r.CourseID = c.course_id
+INNER JOIN dbo.staff staff ON r.SubmittedBy = staff.StaffNo
 INNER JOIN dbo.sessions ses ON r.SessionID = ses.SessionID
 INNER JOIN dbo.semesters sem ON r.SemesterID = sem.SemesterID
 INNER JOIN dbo.levels l ON r.LevelID = l.LevelID
-INNER JOIN dbo.student s ON r.MatricNo = s.MatricNo
+INNER JOIN dbo.student s ON r.MatricNo = s.MatNo
 
 WHERE ${whereConditions.join(' AND ')}
 ${filtersClause}
 
-GROUP BY r.CourseID, c.CourseCode, c.CourseName, r.semesterID, l.LevelName, 
+GROUP BY r.CourseID, c.course_code, c.course_title, r.semesterID, l.LevelName, 
          r.sessionID, CONCAT(staff.LastName, ' ', staff.OtherNames), r.SubmittedBy
-ORDER BY c.CourseCode`;
+ORDER BY c.course_code`;
 
   const request = pool.request()
     .input('HodId', sql.Int, parseInt(HodId))
@@ -265,7 +255,7 @@ export const viewTestResultDetails = async (req, res, next) => {
   const hodId = req.params.id;
 
   if (!courseID) {
-    return next(errorHandler(400, "CourseID and SemesterID are required"));
+    return next(errorHandler(400, "CourseID is are required"));
   }
 
   try {
@@ -300,17 +290,17 @@ export const viewTestResultDetails = async (req, res, next) => {
         r.MatricNo,
         CONCAT(s.LastName, ' ', s.OtherNames) AS StudentName,
         r.CA_Score,
-        c.CourseCode,
+        c.course_code,
         CONCAT(staff.LastName, ' ', staff.OtherNames) AS LecturerName,
         l.levelName
 
       FROM dbo.results r
       
-      INNER JOIN dbo.course c ON r.CourseID = c.CourseID
+      INNER JOIN dbo.courses c ON r.CourseID = c.course_id
       INNER JOIN dbo.levels l ON r.LevelID = l.LevelID
-      INNER JOIN dbo.staff staff ON r.SubmittedBy = staff.StaffCode
+      INNER JOIN dbo.staff staff ON r.SubmittedBy = staff.StaffNo
       INNER JOIN dbo.sessions ses ON r.SessionID = ses.SessionID
-      INNER JOIN dbo.student s ON r.MatricNo = s.MatricNo
+      INNER JOIN dbo.student s ON r.MatricNo = s.MatNo
 
       
       WHERE r.CourseID = @courseID
@@ -319,7 +309,7 @@ export const viewTestResultDetails = async (req, res, next) => {
         AND r.SubmittedBy = @StaffCode
        
         AND r.ResultType = 'Test'
-        AND s.DepartmentID = @hodId
+        AND s.Department = @hodId
       ORDER BY r.MatricNo
     `;
 
@@ -413,26 +403,26 @@ export const downloadTestResults = async (req, res, next) => {
         r.CA_Score,
         r.Grade,
         r.Remarks,
-        c.CourseCode,
-        c.CourseName,
-        c.CreditUnits,
+        c.course_code,
+        c.course_title,
+        c.credit_unit,
         ses.SessionName,
         sem.SemesterName,
         CONCAT(staff.LastName, ' ', staff.OtherNames) AS LecturerName,
         r.SubmittedDate
       FROM dbo.results r
-      INNER JOIN dbo.student s ON r.MatricNo = s.MatricNo
-      INNER JOIN dbo.course c ON r.CourseID = c.CourseID
+      INNER JOIN dbo.student s ON r.MatricNo = s.MatNo
+      INNER JOIN dbo.courses c ON r.CourseID = c.course_id
       INNER JOIN dbo.levels l ON r.LevelID = l.LevelID
       INNER JOIN dbo.sessions ses ON r.SessionID = ses.SessionID
       INNER JOIN dbo.semesters sem ON r.SemesterID = sem.SemesterID
-      INNER JOIN dbo.staff staff ON r.SubmittedBy = staff.StaffCode
+      INNER JOIN dbo.staff staff ON r.SubmittedBy = staff.StaffNo
       WHERE r.CourseID = @courseID
         AND r.SessionID = @activeSessionID
         AND r.SemesterID = @activeSemesterID
         AND r.SubmittedBy = @staffCode
         AND r.ResultType = 'Test'
-        AND s.DepartmentID = @hodId
+        AND s.Department = @hodId
       ORDER BY r.MatricNo
     `;
 
@@ -467,8 +457,8 @@ export const downloadTestResults = async (req, res, next) => {
     ];
 
     // Add course information header
-    worksheet.insertRow(1, ['Course Code:', courseInfo.CourseCode]);
-    worksheet.insertRow(2, ['Course Name:', courseInfo.CourseName]);
+    worksheet.insertRow(1, ['course code:', courseInfo.course_code]);
+    worksheet.insertRow(2, ['Course Name:', courseInfo.course_title]);
     worksheet.insertRow(3, ['Session:', courseInfo.SessionName]);
     worksheet.insertRow(4, ['Semester:', courseInfo.SemesterName]);
     worksheet.insertRow(5, ['Lecturer:', courseInfo.LecturerName]);
@@ -590,13 +580,7 @@ export const getExamResults = async (req, res, next) => {
     whereConditions.push(`r.SessionID = @activeSessionID`);
     whereConditions.push(`r.SemesterID = @activeSemesterID`);
     whereConditions.push(`(
-      (s.DepartmentID = @HodId AND c.CourseCategory = 'department')
-      OR 
-      (s.DepartmentID = @HodId AND c.CourseCategory = 'faculty' 
-       AND c.FacultyID IN (SELECT FacultyID FROM dbo.appdepartment WHERE DepartmentID = @HodId))
-      OR 
-      (s.DepartmentID = @HodId AND c.CourseCategory = 'general')
-    )`);
+      s.Department = @HodId)`);
     
     const params = []
     let paramIndex = 1; 
@@ -615,7 +599,7 @@ export const getExamResults = async (req, res, next) => {
     }
 
     if (search) {
-      filtersClause += `AND (c.CourseCode LIKE @param${paramIndex} OR c.CourseName LIKE @param${paramIndex}) `
+      filtersClause += `AND (c.course_code LIKE @param${paramIndex} OR c.course_name LIKE @param${paramIndex}) `
       params.push({ name: `param${paramIndex}`, type: sql.VarChar, value: `%${search}%` });
       paramIndex++;
     }
@@ -624,8 +608,8 @@ export const getExamResults = async (req, res, next) => {
 SELECT 
 COUNT(DISTINCT r.MatricNo) as StudentCount,  
 r.CourseID,
-c.CourseCode,
-c.CourseName,
+c.course_code,
+c.course_title,
 r.semesterID,
 l.LevelName,
 r.sessionID,
@@ -634,19 +618,19 @@ r.ResultStatus,
 CONCAT(staff.LastName, ' ', staff.OtherNames) AS LecturerName
 
 FROM dbo.results r
-INNER JOIN dbo.course c ON r.CourseID = c.CourseID
-INNER JOIN dbo.staff staff ON r.SubmittedBy = staff.StaffCode
+INNER JOIN dbo.courses c ON r.CourseID = c.course_id
+INNER JOIN dbo.staff staff ON r.SubmittedBy = staff.StaffNo
 INNER JOIN dbo.sessions ses ON r.SessionID = ses.SessionID
 INNER JOIN dbo.semesters sem ON r.SemesterID = sem.SemesterID
 INNER JOIN dbo.levels l ON r.LevelID = l.LevelID
-INNER JOIN dbo.student s ON r.MatricNo = s.MatricNo
+INNER JOIN dbo.student s ON r.MatricNo = s.MatNo
 
 WHERE ${whereConditions.join(' AND ')}
 ${filtersClause}
 
-GROUP BY r.CourseID, c.CourseCode, c.CourseName, r.semesterID, l.LevelName, 
+GROUP BY r.CourseID, c.course_code, c.course_title, r.semesterID, l.LevelName, 
          r.sessionID, CONCAT(staff.LastName, ' ', staff.OtherNames), r.SubmittedBy, r.ResultStatus
-ORDER BY c.CourseCode`;
+ORDER BY c.course_code`;
 
   const request = pool.request()
     .input('HodId', sql.Int, parseInt(HodId))
@@ -713,18 +697,18 @@ export const viewExamResultDetails = async (req, res, next) => {
         r.TotalScore,
         r.Grade,
         r.Remarks,
-        c.CourseCode,
-        c.CourseName,
+        c.course_code,
+        c.course_title,
         CONCAT(staff.LastName, ' ', staff.OtherNames) AS LecturerName,
         l.LevelName
 
       FROM dbo.results r
 
-      INNER JOIN dbo.course c ON r.CourseID = c.CourseID
+      INNER JOIN dbo.courses c ON r.CourseID = c.course_id
       INNER JOIN dbo.levels l ON r.LevelID = l.LevelID
-      INNER JOIN dbo.staff staff ON r.SubmittedBy = staff.StaffCode
+      INNER JOIN dbo.staff staff ON r.SubmittedBy = staff.StaffNo
       INNER JOIN dbo.sessions ses ON r.SessionID = ses.SessionID
-      INNER JOIN dbo.student s ON r.MatricNo = s.MatricNo
+      INNER JOIN dbo.student s ON r.MatricNo = s.MatNo
       
       WHERE r.CourseID = @courseID
         AND r.SessionID = @activeSessionID
@@ -733,7 +717,7 @@ export const viewExamResultDetails = async (req, res, next) => {
 
         AND r.ResultType = 'Exam'
         AND r.ResultStatus = 'Submitted'
-        AND s.DepartmentID = @hodId
+        AND s.Department = @hodId
       ORDER BY r.MatricNo
     `;
 
@@ -806,27 +790,27 @@ export const downloadExamResults = async (req, res, next) => {
         r.TotalScore,
         r.Grade,
         r.Remarks,
-        c.CourseCode,
-        c.CourseName,
-        c.CreditUnits,
+        c.course_code,
+        c.course_title,
+        c.credit_unit,
         ses.SessionName,
         sem.SemesterName,
         CONCAT(staff.LastName, ' ', staff.OtherNames) AS LecturerName,
         r.SubmittedDate
       FROM dbo.results r
-      INNER JOIN dbo.student s ON r.MatricNo = s.MatricNo
-      INNER JOIN dbo.course c ON r.CourseID = c.CourseID
+      INNER JOIN dbo.student s ON r.MatricNo = s.MatNo
+      INNER JOIN dbo.courses c ON r.CourseID = c.course_id
       INNER JOIN dbo.levels l ON r.LevelID = l.LevelID
       INNER JOIN dbo.sessions ses ON r.SessionID = ses.SessionID
       INNER JOIN dbo.semesters sem ON r.SemesterID = sem.SemesterID
-      INNER JOIN dbo.staff staff ON r.SubmittedBy = staff.StaffCode
+      INNER JOIN dbo.staff staff ON r.SubmittedBy = staff.StaffNo
       WHERE r.CourseID = @courseID
         AND r.SessionID = @activeSessionID
         AND r.SemesterID = @activeSemesterID
         AND r.SubmittedBy = @staffCode
         AND r.ResultType = 'Exam'
         AND r.ResultStatus = 'Submitted'
-        AND s.DepartmentID = @hodId
+        AND s.Department = @hodId
       ORDER BY r.MatricNo
     `;
 
@@ -990,14 +974,14 @@ export const approveOrRejectExamResults = async(req, res, next)=>{
       .input('activeSemesterID', sql.Int, activeSemesterID)
       .query(`
         SELECT COUNT(*) AS count FROM dbo.results r
-        INNER JOIN dbo.student s ON r.MatricNo = s.MatricNo
+        INNER JOIN dbo.student s ON r.MatricNo = s.MatNo
         WHERE r.CourseID = @courseID
           AND r.SubmittedBy = @staffCode
           AND r.ResultType = 'Exam'
           AND r.ResultStatus = 'Submitted'
           AND r.SessionID = @activeSessionID
           AND r.SemesterID = @activeSemesterID
-          AND s.DepartmentID = @hodId
+          AND s.Department = @hodId
       `);
       
       if(chexkExistence.recordset[0].count === 0){
@@ -1009,14 +993,14 @@ export const approveOrRejectExamResults = async(req, res, next)=>{
       UPDATE r
       SET r.ResultStatus = @status
       FROM dbo.results r
-      INNER JOIN dbo.student s ON r.MatricNo = s.MatricNo
+      INNER JOIN dbo.student s ON r.MatricNo = s.MatNo
       WHERE r.CourseID = @courseID
         AND r.SubmittedBy = @staffCode
         AND r.ResultType = 'Exam'
         AND r.ResultStatus = 'Submitted'
         AND r.SessionID = @activeSessionID
         AND r.SemesterID = @activeSemesterID
-        AND s.DepartmentID = @hodId
+        AND s.Department = @hodId
       `
 
       const result = await pool.request()
@@ -1047,15 +1031,15 @@ export const approveOrRejectExamResults = async(req, res, next)=>{
               .input('semesterID', sql.Int, semesterID)
               .input('hodId', sql.Int, parseInt(hodId))
               .query(`
-                SELECT DISTINCT r.StudentID, r.MatricNo, r.LevelID, s.DepartmentID
+                SELECT DISTINCT r.StudentID, r.MatricNo, r.LevelID, s.Department
                 FROM dbo.results r
-                INNER JOIN dbo.student s ON r.MatricNo = s.MatricNo
+                INNER JOIN dbo.student s ON r.MatricNo = s.MatNo
                 WHERE r.CourseID = @courseID
                   AND r.SubmittedBy = @staffCode
                   AND r.SessionID = @sessionID
                   AND r.SemesterID = @semesterID
                   AND r.ResultStatus = 'Approved'
-                  AND s.DepartmentID = @hodId
+                  AND s.Department = @hodId
               `)
                
               // Calculate GPA for each student
@@ -1150,7 +1134,7 @@ export const approveOrRejectExamResults = async(req, res, next)=>{
                     .input('cumulativeUnits', sql.Int, cumTotalUnits)
                     .input('semesterDeficitUnits', sql.Int, semTotalDeficitUnits)
                     .input('cumulativeDeficitUnits', sql.Int, cumTotalDeficitUnits)
-                    .input('departmentID', sql.Int, student.DepartmentID)
+                    .input('departmentID', sql.Int, student.Department)
                     .query(`
                       UPDATE dbo.student_gpa
                       SET GPA = @semesterGPA,
@@ -1180,7 +1164,7 @@ export const approveOrRejectExamResults = async(req, res, next)=>{
                     .input('semesterDeficitUnits', sql.Int, semTotalDeficitUnits)
                     .input('cumulativeDeficitUnits', sql.Int, cumTotalDeficitUnits)
                     .input('LevelID', sql.Int, student.LevelID)
-                    .input('departmentID', sql.Int, student.DepartmentID)
+                    .input('departmentID', sql.Int, student.Department)
                     .query(`
                       INSERT INTO dbo.student_gpa 
                       (StudentID, MatricNo, SessionID, SemesterID, GPA, CGPA, TotalCreditUnits, CumulativeCreditUnits, TotalCreditUnitsFailed, CumulativeCreditUnitsFailed, TotalCreditUnitsPassed, CumulativeCreditUnitsPassed, CalculatedDate, LevelID, DepartmentID)

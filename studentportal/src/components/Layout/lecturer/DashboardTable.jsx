@@ -78,12 +78,12 @@ const formatDate = (dateString) => {
         <tbody>
             {courses.map((course, index) => (
                 <tr key={course.AssignmentID || index} className='border-b border-slate-100 hover:bg-gray-50'>
-                    <td className='p-4 font-medium text-gray-900'> {course.CourseCode} </td>
-                    <td className='p-4 text-gray-700'> {course.CourseName} </td>
+                    <td className='p-4 font-medium text-gray-900'> {course.course_code} </td>
+                    <td className='p-4 text-gray-700'> {course.course_title} </td>
                     <td className='p-4 text-gray-700'> {course.DepartmentName || 'N/A'} </td>
-                    <td className='p-4 text-gray-700'> {course.CourseType} </td>
-                    <td className='p-4 text-gray-700'> {course.CreditUnits} </td>
-                    <td className='p-4 text-gray-700'> {course.Level} </td>
+                    <td className='p-4 text-gray-700'> {course.course_type} </td>
+                    <td className='p-4 text-gray-700'> {course.credit_unit} </td>
+                    <td className='p-4 text-gray-700'> {course.level_id} </td>
                     <td className='p-4 text-gray-700'> {course.SessionName || 'N/A'} </td>
                     <td className='p-4 text-gray-700'> {course.SemesterName || 'N/A'} </td>
                     <td className='p-4 text-gray-700'> {formatDate(course.AssignedDate)} </td>

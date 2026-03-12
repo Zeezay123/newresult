@@ -18,6 +18,7 @@ import programmeRoutes from './Routes/Advisor/programmes.route.js';
 import lecturersCourseRoutes from './Routes/lecturer/courses.route.js';
 import lecturersResultsRoutes from './Routes/lecturer/results.route.js';
 import lecturesStudentsRoutes from './Routes/lecturer/students.route.js'
+import lectureRoleRoutes from './Routes/lecturer/role.route.js';
 
 // advisor routes
 import advisorResultRoutes from './Routes/Advisor/result.route.js';
@@ -67,6 +68,7 @@ app.use('/api/hod/advisors', levelandlecturersRoutes)
 app.use('/api/lecturers', lecturersCourseRoutes)
 app.use('/api/lecturers/results', lecturersResultsRoutes)
 app.use('/api/lecturers/students', lecturesStudentsRoutes)
+app.use('/api/lecturers/roles', lectureRoleRoutes)
 
 // advisor routes
 app.use('/api/advisor', advisorResultRoutes);
