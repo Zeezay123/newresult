@@ -49,7 +49,7 @@ export const getCourses = async (req, res, next) => {
             .input('SemesterID', sql.Int, semesterID)
             .query(`
                 SELECT 
-                    s.StaffID,
+                    s.StaffId,
                     s.StaffNo,
                     c.course_id,
                     c.course_code,
@@ -64,14 +64,14 @@ export const getCourses = async (req, res, next) => {
                     sem.SemesterName,
                     d.DepartmentName,
                     dis.Name
-                FROM dbo.staff s
-                INNER JOIN dbo.course_assignment ca ON s.StaffID = ca.LecturerID
+                FROM dbo.tblStaffDirectory s
+                INNER JOIN dbo.course_assignment ca ON s.StaffId = ca.LecturerID
                 INNER JOIN dbo.courses c ON ca.CourseID = c.course_id
                 LEFT JOIN dbo.sessions ses ON ca.SessionID = ses.SessionID
                 LEFT JOIN dbo.semesters sem ON ca.SemesterID = sem.SemesterID
                 LEFT JOIN dbo.appdepartment d ON ca.DepartmentID = d.DepartmentID
                 Left JOIN dbo.Disciplines dis ON ca.DisciplineID = dis.DisciplineID
-                WHERE s.StaffNo = @StaffCode
+                WHERE s.StaffId = @StaffCode
                     AND ca.AssignmentStatus = 'assigned'
                     AND ca.SessionID = @SessionID
                     AND ca.SemesterID = @SemesterID

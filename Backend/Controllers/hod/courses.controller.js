@@ -162,7 +162,7 @@ import { errorHandler } from '../../utils/error.js'
 //         LEFT JOIN dbo.appfaculty f ON c.Faculty = f.FacultyID
 //         LEFT JOIN dbo.appdepartment d ON ca.TeachingDepartmentID = d.DepartmentID
 //         LEFT JOIN dbo.Levels l ON c.level_id = l.LevelID
-//         LEFT JOIN dbo.staff ON ca.LecturerID = staff.StaffID
+//         LEFT JOIN dbo.tblStaffDirectory staff ON ca.LecturerID = staff.StaffId
 //         LEFT JOIN dbo.semesters s ON ca.SemesterID = s.SemesterID
 //         LEFT JOIN dbo.sessions sess ON ca.SessionID = sess.SessionID
 //         WHERE ${whereConditions.join(' AND ')}
@@ -260,7 +260,7 @@ export const getCourses = async (req, res, next) => {
 FROM dbo.courses c
 LEFT JOIN dbo.course_assignment ca ON ca.CourseID = c.course_id
 LEFT JOIN dbo.Levels l ON c.level_id = l.LevelID
-LEFT JOIN dbo.staff s ON ca.LecturerID = s.StaffID
+LEFT JOIN dbo.tblStaffDirectory s ON ca.LecturerID = s.StaffId
 LEFT JOIN dbo.AppDepartment d ON d.DepartmentID = @hodDept
 WHERE  
 c.Semester = @semesterID

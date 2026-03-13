@@ -33,7 +33,7 @@ export const downloadAssignedCourses = async (req, res, next) => {
                     ca.AssignedDate
                 FROM dbo.course c
                 INNER JOIN dbo.course_assignment ca ON c.CourseID = ca.CourseID
-                INNER JOIN dbo.staff staff ON ca.LecturerID = staff.StaffID
+                INNER JOIN dbo.tblStaffDirectory staff ON ca.LecturerID = staff.StaffId
                 WHERE 
                     ca.LecturerID IS NOT NULL
                     AND ca.AssignmentStatus = 'assigned';

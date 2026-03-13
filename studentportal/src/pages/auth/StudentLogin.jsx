@@ -5,6 +5,7 @@ import { useSelector } from 'react-redux'
 import { useDispatch } from 'react-redux'
 import { signInFailure, signInStart, signInSuccess } from '../../Redux/user/slice'
 import { useNavigate } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 
 const StudentLogin = () => {
 
@@ -16,9 +17,20 @@ const [formData, setFormData] = React.useState({
     const {loading, error} = useSelector((state) => state.user);
     const dispatch = useDispatch();
     const navigate = useNavigate();
+    const location = useLocation();
+    const hasAutoLoginAttempted = React.useRef(false);
+const params = new URLSearchParams(location.search);
+const matNo = params.get("matNo");
 
-    const HandleSubmit  = async (e)=>{
-      e.preventDefault()
+React.useEffect(() => {
+    setFormData((prev) => ({...prev, username: matNo || ''}));
+}, [matNo]);
+
+
+    const loginStudent = async (username)=>{
+      if(!username){
+        return;
+      }
 
       try{
         dispatch(signInStart());
@@ -29,8 +41,12 @@ const [formData, setFormData] = React.useState({
             },
             credentials: 'include',
            
-            body: JSON.stringify(formData)
+            body: JSON.stringify({
+              username,
+              role: 'student'
+            })
         });
+        
 const alldata = await response.json();
         const data = alldata.user;
        console.log('Login response data:', alldata);
@@ -53,9 +69,27 @@ const alldata = await response.json();
         }
 
       }catch(error){
-
+        dispatch(signInFailure(error.message || "can't Login"));
       }
     }
+
+    const HandleSubmit  = async (e)=>{
+      e.preventDefault()
+      await loginStudent(formData.username?.trim());
+    }
+
+    React.useEffect(() => {
+      if (hasAutoLoginAttempted.current) {
+        return;
+      }
+
+      if (!matNo || !matNo.trim()) {
+        return;
+      }
+
+      hasAutoLoginAttempted.current = true;
+      loginStudent(matNo.trim());
+    }, [matNo]);
 
 
   return (
@@ -83,7 +117,7 @@ const alldata = await response.json();
 
             {/* Form Section */}
 
-            <form action="" className='w-90 '>
+            <form action="" className='w-90 ' onSubmit={HandleSubmit}>
                 <div>
                 <Label htmlFor="username" value="Username" className='text-slate-200'></Label>
               <div> 
@@ -100,7 +134,7 @@ const alldata = await response.json();
                 </div> 
                 </div>
 
-                <Button className='bg-white text-blue-800 w-full mt-2 hover:text-white'  onClick={(e)=>HandleSubmit(e)}>Login</Button>
+                <Button type='submit' className='bg-white text-blue-800 w-full mt-2 hover:text-white'>Login</Button>
             </form>
              
               </div>

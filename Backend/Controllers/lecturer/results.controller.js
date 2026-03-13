@@ -775,9 +775,9 @@ export const submitResultsToHOD = async(req, res, next) => {
 
                 FROM dbo.course_assignment ca
                 
-                INNER JOIN dbo.staff s ON ca.LecturerID = s.StaffID
+                INNER JOIN dbo.tblStaffDirectory s ON ca.LecturerID = s.StaffId
                 
-                WHERE s.StaffNo = @lectid 
+                WHERE s.StaffId = @lectid 
                     AND CourseID = @CourseID 
                     AND SessionID = @SessionID 
                     AND SemesterID = @SemesterID

@@ -16,7 +16,7 @@ export const staffSignin = async (req, res, next) => {
     const {username} = req.body 
 
     if(!username){
-        return next(errorHandler(400, "Staffcode is required"))
+        return next(errorHandler(400, "Staffid/code is required"))
     }
 
     try {
@@ -38,16 +38,16 @@ export const staffSignin = async (req, res, next) => {
         ) THEN '3'
         ELSE '1'  -- default lecturer role
     END AS AssignedRole,
-    StaffNo,
-    StaffID,
+   
+    StaffId,
     DepartmentID,
     roles
-FROM Staff
-WHERE StaffNo = @StaffNo`
+FROM tblStaffDirectory
+WHERE StaffId = @StaffId`
 
 
         const result = await pool.request()
-        .input('StaffNo', sql.VarChar, username)
+        .input('StaffId', sql.VarChar, username)
         .query(query);
 
    
@@ -69,7 +69,7 @@ WHERE StaffNo = @StaffNo`
    
  
    const token = jwt.sign({
-      id: user.StaffNo,
+      id: user.StaffId,
       role: roleName,
       departmentID: user.DepartmentID
    },
@@ -81,7 +81,7 @@ WHERE StaffNo = @StaffNo`
                     success: true,
                     message: "Signin Successful",
                     user: {
-                        id: user.StaffNo,
+                        id: user.StaffId,
                         name: user.name,
                         email: user.email,
                         role: roleName,

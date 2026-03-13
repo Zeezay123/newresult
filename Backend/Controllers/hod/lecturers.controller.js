@@ -62,13 +62,13 @@ export const getLecturers = async (req, res, next) => {
         const hodResult = await pool.request()
             .input('staffCode', sql.VarChar, hodStaffCode)
           
-            .query('SELECT StaffID FROM dbo.staff WHERE StaffNo = @staffCode');
+            .query('SELECT StaffId FROM dbo.tblStaffDirectory WHERE StaffId = @staffCode');
         
-        const hodStaffID = hodResult.recordset.length > 0 ? hodResult.recordset[0].StaffID : null;
+        const hodStaffID = hodResult.recordset.length > 0 ? hodResult.recordset[0].StaffId : null;
 
         let query = `
             SELECT 
-                s.StaffID as LecturerID,
+                s.StaffId as LecturerID,
                 s.LastName,
                 s.OtherNames,
                 s.EmailAddress,
@@ -86,9 +86,9 @@ export const getLecturers = async (req, res, next) => {
                 STRING_AGG(CAST(tp.ProgrammeName AS VARCHAR), ', ') AS TeachingProgrammeNames,
                 STRING_AGG(CAST(td.DepartmentName AS VARCHAR), ', ') AS TeachingDepartmentNames
                 
-            FROM dbo.staff s
-            LEFT JOIN dbo.appdepartment d ON s.DepartmentID = d.DepartmentID
-            LEFT JOIN dbo.course_assignment ca ON s.StaffID = ca.LecturerID
+            FROM dbo.tblStaffDirectory s
+            LEFT JOIN dbo.appdepartment d ON s.departmentid = d.DepartmentID
+            LEFT JOIN dbo.course_assignment ca ON s.StaffId = ca.LecturerID
                 AND (
                     ca.AssignedBy = @hodStaffID  -- Show assignments made by this HOD
                     OR ca.TeachingDepartmentID = @departmentID  -- Or assignments in their department
@@ -131,7 +131,7 @@ export const getLecturers = async (req, res, next) => {
             .input('sessionID', sql.Int, sessionID)
 
         if (hodStaffID) {
-            request.input('hodStaffID', sql.Int, hodStaffID)
+            request.input('hodStaffID', sql.VarChar, hodStaffID)
             ;
         }
         if (hodDepartmentID) {
@@ -171,8 +171,8 @@ export const getLecturersCount = async (req, res, next) => {
         if (hodDepartmentID) request.input('departmentID', sql.Int, hodDepartmentID);
 
         const query = hodDepartmentID
-            ? 'SELECT COUNT(*) AS count FROM dbo.staff WHERE DepartmentID = @departmentID'
-            : 'SELECT COUNT(*) AS count FROM dbo.staff';
+            ? 'SELECT COUNT(*) AS count FROM dbo.tblStaffDirectory WHERE departmentid = @departmentID'
+            : 'SELECT COUNT(*) AS count FROM dbo.tblStaffDirectory';
 
         const result = await request.query(query);
         const count = result.recordset[0]?.count || 0;
@@ -212,13 +212,13 @@ export const assignCourse = async (req, res, next) => {
         // Get HOD's StaffID from StaffCode
         const hodResult = await pool.request()
             .input('staffNo', sql.VarChar, hodStaffCode)
-            .query('SELECT StaffID,FacultyID FROM dbo.staff WHERE StaffNo = @staffNo');
+            .query('SELECT StaffId, FacultyID FROM dbo.tblStaffDirectory WHERE StaffId = @staffNo');
         
         if (hodResult.recordset.length === 0) {
             return next(errorHandler(404, "HOD staff record not found"));
         }
         
-        const hodStaffID = hodResult.recordset[0].StaffID;
+        const hodStaffID = hodResult.recordset[0].StaffId;
         const hodFacultyID = hodResult.recordset[0].FacultyID;
  //get the active session 
          const activeSessionResult = await pool.request()
@@ -284,7 +284,7 @@ export const assignCourse = async (req, res, next) => {
         // Check if this lecturer already has this course assigned for this session/semester
         const existingAssignment = await pool.request()
             .input('courseID', sql.Int, parseInt(courseID))
-            .input('lecturerID', sql.Int, parseInt(lecturerID))
+            .input('lecturerID', sql.VarChar, lecturerID)
             .input('semesterID', sql.Int, parseInt(semesterID))
             .input('sessionID', sql.Int, parseInt(sessionID))
             .input('TeachingProgrammeID', sql.Int, parseInt(AssignedProgrammeID))
@@ -316,7 +316,7 @@ export const assignCourse = async (req, res, next) => {
         await pool.request()
             .input('courseID', sql.Int, courseID)
             .input('courseCode', sql.VarChar, course.course_code)
-            .input('lecturerID', sql.Int, lecturerID)
+            .input('lecturerID', sql.VarChar, lecturerID)
             .input('sessionID', sql.Int, sessionID)
             .input('semesterID', sql.Int, semesterID)
             .input('programmeID', sql.Int, course.programme_id)
@@ -327,7 +327,7 @@ export const assignCourse = async (req, res, next) => {
             .input('facultyID', sql.Int, parseInt(hodFacultyID))
             .input('TeachingProgrammeID', sql.Int, parseInt(AssignedProgrammeID))
             .input('TeachingDepartmentID', sql.Int, parseInt(hodDepartmentID))
-            .input('assignedBy', sql.Int, parseInt(hodStaffID))
+            .input('assignedBy', sql.VarChar, hodStaffID)
             .query(assignQuery);
 
         res.status(200).json({
@@ -364,13 +364,13 @@ export const unassignCourse = async (req, res, next) => {
         // Get HOD's StaffID
         const hodResult = await pool.request()
             .input('staffCode', sql.VarChar, hodStaffCode)
-            .query('SELECT StaffID FROM dbo.staff WHERE StaffCode = @staffCode');
+            .query('SELECT StaffId FROM dbo.tblStaffDirectory WHERE StaffId = @staffCode');
         
         if (hodResult.recordset.length === 0) {
             return next(errorHandler(404, "HOD staff record not found"));
         }
         
-        const hodStaffID = hodResult.recordset[0].StaffID;
+        const hodStaffID = hodResult.recordset[0].StaffId;
 
         // Verify HOD has permission to unassign this course
         // Permission granted if:
@@ -379,7 +379,7 @@ export const unassignCourse = async (req, res, next) => {
         const checkQuery = await pool.request()
             .input('assignmentID', sql.Int, assignmentID)
             .input('departmentID', sql.Int, hodDepartmentID)
-            .input('hodStaffID', sql.Int, hodStaffID)
+            .input('hodStaffID', sql.VarChar, hodStaffID)
             .query(`
                 SELECT ca.AssignmentID, ca.CourseCategory, ca.AssignedBy, ca.TeachingDepartmentID
                 FROM dbo.course_assignment ca
@@ -462,7 +462,7 @@ export const getlecturerDepartment = async (req, res, next)=>{
      
                 
                 let query = `SELECT StaffID, StaffNo, CONCAT(LastName, ' ', Othernames) AS FullName 
-                FROM dbo.staff WHERE DepartmentID = @departmentID `
+                FROM dbo.tblStaffDirectory WHERE departmentid = @departmentID `
 
             //    if(DepartmentCode !== 'GST'){
             //        query += ` AND DepartmentID = @departmentID`

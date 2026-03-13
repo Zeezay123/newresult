@@ -382,7 +382,7 @@ export const viewResults = async (req, res, next) => {
 
         INNER JOIN dbo.courses c ON r.CourseID = c.course_id
       INNER JOIN dbo.levels l ON r.LevelID = l.LevelID
-      INNER JOIN dbo.staff staff ON r.SubmittedBy = staff.StaffNo
+      INNER JOIN dbo.tblStaffDirectory staff ON r.SubmittedBy = staff.StaffId
       INNER JOIN dbo.sessions ses ON r.SessionID = ses.SessionID
       INNER JOIN dbo.student s ON r.MatricNo = s.MatNo
       
@@ -478,7 +478,7 @@ export const downloadResults = async (req, res, next) => {
         FROM dbo.results r
         INNER JOIN dbo.courses c ON r.CourseID = c.course_id
         INNER JOIN dbo.levels l ON r.LevelID = l.LevelID
-        INNER JOIN dbo.staff staff ON r.SubmittedBy = staff.StaffNo
+        INNER JOIN dbo.tblStaffDirectory staff ON r.SubmittedBy = staff.StaffId
         INNER JOIN dbo.sessions ses ON r.SessionID = ses.SessionID
         INNER JOIN dbo.student s ON r.MatricNo = s.MatNo
         WHERE r.CourseID = @courseID

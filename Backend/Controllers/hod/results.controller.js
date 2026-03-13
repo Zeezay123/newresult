@@ -49,7 +49,7 @@ export const getALLExamResults = async (req, res, next) => {
     whereConditions.push(`r.SessionID = @activeSessionID`);
     whereConditions.push(`r.SemesterID = @activeSemesterID`);
     whereConditions.push(`(
-      s.department = @HodId
+      s.departmentid = @HodId
     )`);
     
     const params = []
@@ -89,7 +89,7 @@ CONCAT(staff.LastName, ' ', staff.OtherNames) AS LecturerName
 
 FROM dbo.results r
 INNER JOIN dbo.courses c ON r.CourseID = c.course_id
-INNER JOIN dbo.staff staff ON r.SubmittedBy = staff.StaffNo
+INNER JOIN dbo.tblStaffDirectory staff ON r.SubmittedBy = staff.StaffId
 INNER JOIN dbo.sessions ses ON r.SessionID = ses.SessionID
 INNER JOIN dbo.semesters sem ON r.SemesterID = sem.SemesterID
 INNER JOIN dbo.levels l ON r.LevelID = l.LevelID
@@ -215,7 +215,7 @@ CONCAT(staff.LastName, ' ', staff.OtherNames) AS LecturerName
 
 FROM dbo.results r
 INNER JOIN dbo.courses c ON r.CourseID = c.course_id
-INNER JOIN dbo.staff staff ON r.SubmittedBy = staff.StaffNo
+INNER JOIN dbo.tblStaffDirectory staff ON r.SubmittedBy = staff.StaffId
 INNER JOIN dbo.sessions ses ON r.SessionID = ses.SessionID
 INNER JOIN dbo.semesters sem ON r.SemesterID = sem.SemesterID
 INNER JOIN dbo.levels l ON r.LevelID = l.LevelID
@@ -298,7 +298,7 @@ export const viewTestResultDetails = async (req, res, next) => {
       
       INNER JOIN dbo.courses c ON r.CourseID = c.course_id
       INNER JOIN dbo.levels l ON r.LevelID = l.LevelID
-      INNER JOIN dbo.staff staff ON r.SubmittedBy = staff.StaffNo
+      INNER JOIN dbo.tblStaffDirectory staff ON r.SubmittedBy = staff.StaffId
       INNER JOIN dbo.sessions ses ON r.SessionID = ses.SessionID
       INNER JOIN dbo.student s ON r.MatricNo = s.MatNo
 
@@ -416,7 +416,7 @@ export const downloadTestResults = async (req, res, next) => {
       INNER JOIN dbo.levels l ON r.LevelID = l.LevelID
       INNER JOIN dbo.sessions ses ON r.SessionID = ses.SessionID
       INNER JOIN dbo.semesters sem ON r.SemesterID = sem.SemesterID
-      INNER JOIN dbo.staff staff ON r.SubmittedBy = staff.StaffNo
+      INNER JOIN dbo.tblStaffDirectory staff ON r.SubmittedBy = staff.StaffId
       WHERE r.CourseID = @courseID
         AND r.SessionID = @activeSessionID
         AND r.SemesterID = @activeSemesterID
@@ -619,7 +619,7 @@ CONCAT(staff.LastName, ' ', staff.OtherNames) AS LecturerName
 
 FROM dbo.results r
 INNER JOIN dbo.courses c ON r.CourseID = c.course_id
-INNER JOIN dbo.staff staff ON r.SubmittedBy = staff.StaffNo
+INNER JOIN dbo.tblStaffDirectory staff ON r.SubmittedBy = staff.StaffId
 INNER JOIN dbo.sessions ses ON r.SessionID = ses.SessionID
 INNER JOIN dbo.semesters sem ON r.SemesterID = sem.SemesterID
 INNER JOIN dbo.levels l ON r.LevelID = l.LevelID
@@ -706,7 +706,7 @@ export const viewExamResultDetails = async (req, res, next) => {
 
       INNER JOIN dbo.courses c ON r.CourseID = c.course_id
       INNER JOIN dbo.levels l ON r.LevelID = l.LevelID
-      INNER JOIN dbo.staff staff ON r.SubmittedBy = staff.StaffNo
+      INNER JOIN dbo.tblStaffDirectory staff ON r.SubmittedBy = staff.StaffId
       INNER JOIN dbo.sessions ses ON r.SessionID = ses.SessionID
       INNER JOIN dbo.student s ON r.MatricNo = s.MatNo
       
@@ -803,7 +803,7 @@ export const downloadExamResults = async (req, res, next) => {
       INNER JOIN dbo.levels l ON r.LevelID = l.LevelID
       INNER JOIN dbo.sessions ses ON r.SessionID = ses.SessionID
       INNER JOIN dbo.semesters sem ON r.SemesterID = sem.SemesterID
-      INNER JOIN dbo.staff staff ON r.SubmittedBy = staff.StaffNo
+      INNER JOIN dbo.tblStaffDirectory staff ON r.SubmittedBy = staff.StaffId
       WHERE r.CourseID = @courseID
         AND r.SessionID = @activeSessionID
         AND r.SemesterID = @activeSemesterID

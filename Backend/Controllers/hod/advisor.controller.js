@@ -26,9 +26,9 @@ export const getAdvisors = async (req, res, next) =>{
     const lecturersResult = await pool.request()
         .input('DepartmentID', sql.Int, hodID)
         .query(`
-            SELECT StaffID, CONCAT(LastName, ' ', OtherNames) AS StaffName, StaffNo 
-            FROM dbo.staff 
-            WHERE DepartmentID = @DepartmentID
+            SELECT StaffId, CONCAT(LastName, ' ', OtherNames) AS StaffName 
+            FROM dbo.tblStaffDirectory 
+            WHERE departmentid = @DepartmentID
         `);
 
     if(lecturersResult.recordset.length === 0){
@@ -141,20 +141,20 @@ export const assignAdvisor = async (req, res, next) => {
             
             const getStaff = await pool.request()
             .input('StaffCode', sql.VarChar, StaffCode)
-            .query(`SELECT StaffID FROM dbo.staff WHERE StaffNo = @StaffCode`)
+            .query(`SELECT StaffId FROM dbo.tblStaffDirectory WHERE StaffId = @StaffCode`)
 
                 if(getStaff.recordset.length === 0){
                     return next(errorHandler(404, 'Staff member not found'));
                 }
 
-                const staffID = getStaff.recordset[0].StaffID;
+                const staffID = getStaff.recordset[0].StaffId;
             
             result = await pool.request()
         .input('LevelID', sql.Int, LevelID)
         .input('ProgrammeID', sql.Int, ProgrammeID)
         .input('StaffCode',sql.VarChar, StaffCode)
         .input('DepartmentID', sql.Int, DepartmentID)
-        .input('StaffID', sql.Int, staffID)
+        .input('StaffID', sql.VarChar, staffID)
         .input('SessionID', sql.Int, getSessionID.recordset[0].SessionID)
         .query(` INSERT INTO dbo.Level_Advisors (LevelID, ProgrammeID, StaffCode, DepartmentID, StaffID, SessionID, RoleType)
                  VALUES (@LevelID, @ProgrammeID, @StaffCode, @DepartmentID, @StaffID, @SessionID, 'Advisor')`)
@@ -201,7 +201,7 @@ export const getAssignedAdvisors = async(req,res,next) =>{
         FROM dbo.Level_Advisors la
         JOIN dbo.levels l ON la.LevelID = l.LevelID
         JOIN dbo.programmes p ON la.ProgrammeID = p.ProgrammeID
-        JOIN dbo.staff s ON la.StaffCode = s.StaffNo
+        JOIN dbo.tblStaffDirectory s ON la.StaffCode = s.StaffId
         WHERE la.DepartmentID = @HodID
 
         
