@@ -402,23 +402,14 @@ export const unassignCourse = async (req, res, next) => {
 
         // For general/faculty courses: DELETE the row (removes this lecturer's assignment)
         // For department courses: UPDATE to NULL (keeps the row for future assignment)
-        if (courseCategory === 'general' || courseCategory === 'faculty') {
+      
             await pool.request()
                 .input('assignmentID', sql.Int, assignmentID)
                 .query(`
                     DELETE FROM dbo.course_assignment 
                     WHERE AssignmentID = @assignmentID
                 `);
-        } else {
-            await pool.request()
-                .input('assignmentID', sql.Int, assignmentID)
-                .query(`
-                    UPDATE dbo.course_assignment 
-                    SET LecturerID = NULL,
-                        AssignmentStatus = 'unassigned'
-                    WHERE AssignmentID = @assignmentID
-                `);
-        }
+     
 
         res.status(200).json({
             success: true,
@@ -461,7 +452,7 @@ export const getlecturerDepartment = async (req, res, next)=>{
                 // }
      
                 
-                let query = `SELECT StaffID, StaffNo, CONCAT(LastName, ' ', Othernames) AS FullName 
+                let query = `SELECT StaffId, CONCAT(LastName, ' ', Othernames) AS FullName 
                 FROM dbo.tblStaffDirectory WHERE departmentid = @departmentID `
 
             //    if(DepartmentCode !== 'GST'){

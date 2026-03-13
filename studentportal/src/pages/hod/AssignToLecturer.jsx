@@ -28,7 +28,7 @@ const handleAssignmentSuccess = () => {
            <h1 className='text-2xl font-bold text-black'>Course Allocation</h1>
            <p className='text-sm text-slate-600'>Assign and Deallocate course to lecturers</p>
         </div>
-    <AssigncourseCard onFilterChange={handleFilterChange} key={refreshKey} />
+    {/* <AssigncourseCard onFilterChange={handleFilterChange} key={refreshKey} /> */}
 
        <div className='flex gap-2'> 
       

@@ -1,5 +1,5 @@
-import {sql, poolPromise} from '../../db.js';
-import { errorHandler } from '../../utils/error.js';
+import {sql,poolPromise} from '../db.js'
+import { errorHandler } from '../utils/error.js';
 
 
 
@@ -35,37 +35,4 @@ try {
     return next(errorHandler(500, "Server Error: " + error.message))
 }
 
-}
-
-
- export const CheckAdvisor = async (req, res, next) => {
-    const lectid = req.user.id
-    
-    try {
-        
-        const pool = await poolPromise;
-
-        if (!pool) {
-            return next(errorHandler(500, "Database connection failed"));
-        }
-
-
-        const result = await pool.request()
-            .input('StaffCode', sql.VarChar, lectid)
-            .query(`
-                SELECT la.AdvisorID, la.StaffCode 
-                FROM dbo.Level_Advisors la
-                WHERE StaffCode = @StaffCode
-            `);
-
-            if(result.recordset.length === 0){
-                return res.status(200).json({ success: true, isAdvisor: false });
-            } else {
-                return res.status(200).json({ success: true, isAdvisor: true });
-            }
-
-    } catch (error) {
-        console.error('Error checking advisor role:', error.stack);
-        return next(errorHandler(500, "Error checking advisor role: " + error.message));
-    }
 }

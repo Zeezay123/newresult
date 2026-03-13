@@ -10,6 +10,7 @@ import departmentRoutes from './Routes/department.route.js';
 import studentsRoutes from './Routes/hod/students.route.js';
 import HodResultRoutes from './Routes/hod/results.route.js';
 import levelandlecturersRoutes from './Routes/hod/advisor.route.js';
+import hodRoleRoutes from './Routes/hod/roles.route.js';
 
 import sessionSemesterRoutes from './Routes/sessem.route.js';
 import levelRoutes from './Routes/level.route.js';
@@ -22,6 +23,7 @@ import lectureRoleRoutes from './Routes/lecturer/role.route.js';
 
 // advisor routes
 import advisorResultRoutes from './Routes/Advisor/result.route.js';
+import advisorRoleRoutes from './Routes/Advisor/roles.route.js';
 
 // senate routes
 import senateResultRoutes from './Routes/senate/results.route.js';
@@ -63,6 +65,7 @@ app.use('/api/hod/results', HodResultRoutes);
 app.use(`/api/sessions`, sessionSemesterRoutes)
 app.use('/api/levels', levelRoutes);
 app.use('/api/hod/advisors', levelandlecturersRoutes)
+app.use('/api/hod/roles', hodRoleRoutes);
 // lecturersRoutes
 
 app.use('/api/lecturers', lecturersCourseRoutes)
@@ -72,6 +75,7 @@ app.use('/api/lecturers/roles', lectureRoleRoutes)
 
 // advisor routes
 app.use('/api/advisor', advisorResultRoutes);
+app.use('/api/advisor/roles', advisorRoleRoutes);
 app.use('/api/programmes/', programmeRoutes);
 
 // senate routes

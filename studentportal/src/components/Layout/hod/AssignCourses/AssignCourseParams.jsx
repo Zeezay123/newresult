@@ -297,7 +297,7 @@ console.log('selected course', selectedCourse)
      <option value="">Select Lecturer</option> 
 
      {lecturers.length > 0 && lecturers.map((lecturer)=>(
-        <option value={lecturer.StaffID} key={lecturer.StaffID}>{lecturer.FullName}</option>
+        <option value={lecturer.StaffId} key={lecturer.StaffId}>{lecturer.FullName}</option>
      ))}
      </Select>
     </div> 
