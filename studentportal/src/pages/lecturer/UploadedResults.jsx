@@ -40,7 +40,7 @@ const UploadedResults = () => {
   // Fetch initial data
   useEffect(() => {
     fetchSessions()
-    fetchSemesters()
+    fetchActiveSemester()
     fetchCourses()
   }, [])
 
@@ -57,23 +57,39 @@ const UploadedResults = () => {
       if (response.ok) {
         const data = await response.json()
         setSessions(data.session ? [data.session] : [])
+        setSelectedSession(data.session ? data.session.SessionID : '')
       }
     } catch (error) {
       console.error('Error fetching sessions:', error)
     }
   }
+ 
+  const fetchActiveSemester = async () => {
+    try{
 
-  const fetchSemesters = async () => {
-    try {
-      const response = await fetch('/api/sessions/getsemesters', { credentials: 'include' })
-      if (response.ok) {
-        const data = await response.json()
-        setSemesters(data.semesters || [])
+      const response = await fetch('/api/sessions/getActiveSemester', { credentials: 'include' })
+      if (!response.ok) {
+        throw new Error('Failed to fetch active semester')
       }
+      const data = await response.json()
+      setSemesters(data.semester ? [data.semester] : [])
+      setSelectedSemester(data.semester ? data.semester.SemesterID : '')
     } catch (error) {
-      console.error('Error fetching semesters:', error)
+      console.error('Error fetching active semester:', error)
     }
   }
+
+  // const fetchSemesters = async () => {
+  //   try {
+  //     const response = await fetch('/api/sessions/getsemesters', { credentials: 'include' })
+  //     if (response.ok) {
+  //       const data = await response.json()
+  //       setSemesters(data.semesters || [])
+  //     }
+  //   } catch (error) {
+  //     console.error('Error fetching semesters:', error)
+  //   }
+  // }
 
   const fetchCourses = async () => {
     try {
@@ -143,9 +159,12 @@ const UploadedResults = () => {
           CourseID: selectedCourse
         })
       })
+ 
+      const data = await response.json();
 
       if (!response.ok) {
-        throw new Error('Failed to update result')
+    
+        return alert(data.message || 'Failed to update result');
       }
 
       alert('Result updated successfully')
@@ -153,7 +172,7 @@ const UploadedResults = () => {
       fetchResults()
     } catch (error) {
       console.error('Error updating result:', error)
-      alert('Failed to update result')
+      alert('Failed to update result because : ' + error.message)
     }
   }
 
@@ -525,7 +544,7 @@ const UploadedResults = () => {
         <ModalBody>
           <div className='flex flex-col gap-4'>
             <div className='flex items-center gap-3 p-4 bg-yellow-50 border border-yellow-200 rounded-lg'>
-              <AlertCircle size={24} className='text-yellow-600' />
+              <AlertCircle size={24} className='text-yellow-60[0' />
               <div>
                 <p className='font-semibold text-yellow-900'>Important Notice</p>
                 <p className='text-sm text-yellow-800'>

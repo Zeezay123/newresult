@@ -1,10 +1,12 @@
 import { Select, Label, FileInput } from 'flowbite-react'
-import { ArrowDownToLine, CloudDownload, Loader2, SlidersHorizontal, Upload } from 'lucide-react'
+import { ArrowDownToLine, Check, CloudDownload, Loader2, SlidersHorizontal, Upload } from 'lucide-react'
 import React, { useState, useEffect } from 'react'
 import UploadedResultTable from '../../components/Layout/lecturer/UploadedResultTable'
 import { useSelector } from 'react-redux'
 import Button from '../../components/ui/Button'
-import Uploadinstructions from '../../components/ui/Uploadinstructions'
+import Uploadinstructions from '../../components/ui/Uploadinstructions.jsx'
+import ManualUpload from '../../components/Layout/lecturer/ManualUpload.jsx'
+import CompleteManualUpload from '../../components/Layout/lecturer/CompleteManualUpload.jsx'
 
 const TestResult = () => {
   const [courses, setCourses] = useState([])
@@ -18,6 +20,9 @@ const TestResult = () => {
   const fileInputRef = React.useRef(null)
   const lecturerId = useSelector((state) => state.user.id);
   const [uploadSuccess, setUploadSuccess] = useState(null);
+
+  const [showManualUpload, setShowManualUpload] = useState(false);
+  const [showCompleteManualUpload, setShowCompleteManualUpload] = useState(false);
    
   
 
@@ -46,7 +51,7 @@ const TestResult = () => {
     setLoading(true);
     try {
       const response = await fetch(
-        `/api/lecturers/results/download-template?courseId=${selectedCourse}`,
+        `/api/lecturers/results/download-template?courseId=${selectedCourse}&resultType=${resultType}`,
         { credentials: 'include' }
       );
 
@@ -164,7 +169,7 @@ const formData = new FormData();
        <div className='flex items-center gap-2'> <span className='text-blue-700'><SlidersHorizontal size={20}/> </span>  <span className='font-semibold text-black '>Session Configuration</span></div>
        
        {/* session semester div */}
-       <div className='flex gap-4 flex-wrap'>
+       <div className='flex items-center gap-4 flex-wrap'>
         {/* Result Type Selector */}
         <div>
             <Label htmlFor="result-type"> Result Type</Label>
@@ -195,10 +200,26 @@ const formData = new FormData();
                 ))}
             </Select>
         </div>
+   <div> 
+    <div className='text-sm font-medium text-slate-900'> Click to upload individual results  manually</div>
+          <Button text="Manual Upload" disabled={!selectedCourse} onClick={() => setShowManualUpload(true)} className='mt-2' />
+        </div>
+
+        {showManualUpload && <ManualUpload onClose={() => setShowManualUpload(false)}  selectedCourse={selectedCourse} resultType={resultType} courses={courses} />}
+
+<div>
+<div className='text-sm font-medium text-slate-900'> Click to upload complete results  manually</div>
+          <Button text="Manual Upload" disabled={!selectedCourse} onClick={() => setShowCompleteManualUpload(true)} className='mt-2' />
+        </div>
+        {showCompleteManualUpload && <CompleteManualUpload onClose={() => setShowCompleteManualUpload(false)}  selectedCourse={selectedCourse} resultType={resultType} courses={courses} />}
        </div>
+      
+      
+      
+      
        </div>
 
-
+    
 
        {/* second part of card */}
 
@@ -267,7 +288,7 @@ const formData = new FormData();
    />
    {selectedFile && (
      <p className='text-xs text-green-600 mt-2'>
-       ✓ File selected: {selectedFile.get('file')?.name || 'Ready to upload'}
+       <Check /> File selected: {selectedFile.get('file')?.name || 'Ready to upload'}
      </p>
    )}
     </div>

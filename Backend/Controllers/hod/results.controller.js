@@ -4,15 +4,76 @@ import { errorHandler } from "../../utils/error.js";
 
 
 
+//get result count for dashboard
 
+export const getResultStats = async (req, res, next) => {
+  const hodId = req.user.id;
+  const departmentId = req.user.departmentID;
+
+   if(!hodId || !departmentId){
+    return next(errorHandler(400, "HOD ID and Department ID are required"));
+   }
+
+
+  try {
+    const pool = await poolPromise;
+    if (!pool) {
+      return next(errorHandler(500, "Database connection failed"));
+    }
+
+
+// Get active session and semester
+    const activeSessionResult = await pool.request()
+      .query(`SELECT SessionID FROM dbo.sessions WHERE isActive = 1`);
+    
+    if(activeSessionResult.recordset.length === 0){
+      return next(errorHandler(404, "No active session found"))
+    }
+    
+    const activeSessionID = activeSessionResult.recordset[0].SessionID;
+
+    const activeSemesterResult = await pool.request()
+      .query(`SELECT SemesterID FROM dbo.semesters WHERE isActive = 'true'`);
+    
+    if(activeSemesterResult.recordset.length === 0){
+      return next(errorHandler(404, "No active semester found"))
+    }
+    
+    const activeSemesterID = activeSemesterResult.recordset[0].SemesterID;
+  
+    const result = await pool.request()
+      .input('activeSessionID', sql.Int, activeSessionID)
+      .input('activeSemesterID', sql.Int, activeSemesterID)
+      .input('DepartmentId', sql.Int, parseInt(departmentId))
+      .query(`SELECT COUNT(DISTINCT r.ResultID) AS TotalResults FROM dbo.results r 
+        LEFT JOIN dbo.tblStaffDirectory s ON r.SubmittedBy = s.StaffId
+        WHERE r.SessionID = @activeSessionID
+        AND r.SemesterID = @activeSemesterID
+        AND r.ResultStatus = 'Submitted'
+        AND s.DepartmentId = @DepartmentId
+        `)
+
+      if(result.recordset.length === 0){  
+        return res.status(200).json({ success: true, stats: { total: 0 } });
+      }
+
+    return res.status(200).json({ success: true, stats: result.recordset[0] });
+
+  }catch (error) {  
+    console.log("Error fetching result stats:", error.stack);
+    return next(errorHandler(500, "Server Error: " + error.message));
+  }
+}
 
 //------ get all result
 export const getALLExamResults = async (req, res, next) => {
-  const HodId = req.params.id;
+  const HodId = req.user.departmentID;
   const { semesterID, levelID, search } = req.query;
    
   const SemesterID = parseInt(semesterID);
   const LevelID = parseInt(levelID);
+
+  console.log("HOD ID:", HodId, "SemesterID:", SemesterID, "LevelID:", LevelID, "Search:", search);
 
   if (!HodId) {
     return res.status(400).json({ message: "HOD ID is required" });
@@ -49,7 +110,7 @@ export const getALLExamResults = async (req, res, next) => {
     whereConditions.push(`r.SessionID = @activeSessionID`);
     whereConditions.push(`r.SemesterID = @activeSemesterID`);
     whereConditions.push(`(
-      s.departmentid = @HodId
+      s.department = @HodId
     )`);
     
     const params = []
@@ -76,7 +137,8 @@ export const getALLExamResults = async (req, res, next) => {
    
     let query = `
 SELECT 
-COUNT(DISTINCT r.MatricNo) as StudentCount,  
+COUNT(DISTINCT r.MatricNo) as StudentCount,
+MAX(ISNULL(reg.TotalStudents, 0)) AS TotalStudents,
 r.CourseID,
 c.course_code,
 c.course_title,
@@ -85,6 +147,8 @@ l.LevelName,
 r.sessionID,
 r.SubmittedBy,
 r.ResultStatus,
+r.ResultType,
+
 CONCAT(staff.LastName, ' ', staff.OtherNames) AS LecturerName
 
 FROM dbo.results r
@@ -94,12 +158,22 @@ INNER JOIN dbo.sessions ses ON r.SessionID = ses.SessionID
 INNER JOIN dbo.semesters sem ON r.SemesterID = sem.SemesterID
 INNER JOIN dbo.levels l ON r.LevelID = l.LevelID
 INNER JOIN dbo.student s ON r.MatricNo = s.MatNo
+OUTER APPLY (
+    SELECT COUNT(DISTINCT cr.mat_no) AS TotalStudents
+    FROM dbo.course_registrations cr
+    WHERE cr.session = r.SessionID
+      AND EXISTS (
+          SELECT 1
+          FROM STRING_SPLIT(CAST(ISNULL(cr.courses, '') AS NVARCHAR(MAX)), ',') AS rc
+          WHERE TRY_CAST(LTRIM(RTRIM(rc.value)) AS INT) = r.CourseID
+      )
+) reg
 
 WHERE ${whereConditions.join(' AND ')}
 ${filtersClause}
 
 GROUP BY r.CourseID, c.course_code, c.course_title, r.semesterID, l.LevelName, 
-         r.sessionID, CONCAT(staff.LastName, ' ', staff.OtherNames), r.SubmittedBy, r.ResultStatus
+         r.sessionID, CONCAT(staff.LastName, ' ', staff.OtherNames), r.SubmittedBy, r.ResultStatus, r.ResultType
 ORDER BY c.course_code`;
 
   const request = pool.request()
@@ -451,7 +525,7 @@ export const downloadTestResults = async (req, res, next) => {
       { header: 'Matric Number', key: 'matricNo', width: 20 },
       { header: 'Name', key: 'name', width: 40 },
       { header: 'Level', key: 'level', width: 10 },
-      { header: 'CA Score (30)', key: 'caScore', width: 15 },
+      { header: 'CA Score', key: 'caScore', width: 15 },
       { header: 'Grade', key: 'grade', width: 10 },
       { header: 'Remarks', key: 'remarks', width: 12 }
     ];
@@ -839,9 +913,9 @@ export const downloadExamResults = async (req, res, next) => {
       { header: 'Matric Number', key: 'matricNo', width: 20 },
       { header: 'Name', key: 'name', width: 40 },
       { header: 'Level', key: 'level', width: 10 },
-      { header: 'CA Score (30)', key: 'caScore', width: 15 },
-      { header: 'Exam Score (70)', key: 'examScore', width: 15 },
-      { header: 'Total (100)', key: 'totalScore', width: 12 },
+      { header: 'CA Score', key: 'caScore', width: 15 },
+      { header: 'Exam Score', key: 'examScore', width: 15 },
+      { header: 'Total', key: 'totalScore', width: 12 },
       { header: 'Grade', key: 'grade', width: 10 },
       { header: 'Remarks', key: 'remarks', width: 12 }
     ];

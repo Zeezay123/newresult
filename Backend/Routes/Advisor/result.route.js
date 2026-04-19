@@ -8,6 +8,7 @@ import {
     getCurrentSemesterCourses,
     getSemesterSummary,
     getPreviousSemesterCarryovers,
+    getDashboardStats,
     approveLevelResults,
     rejectLevelResults,
     downloadLevelResults
@@ -18,6 +19,9 @@ const router = express.Router();
 
 // Get all individual student results in advisor's level
 router.get('/results', VerifyUser, getResults);
+
+// Advisor dashboard summary stats
+router.get('/dashboard-stats', VerifyUser, getDashboardStats);
 
 // Get results for a specific course
 router.post('/viewresults', VerifyUser, viewResults); 

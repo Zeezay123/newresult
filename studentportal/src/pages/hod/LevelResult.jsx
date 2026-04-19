@@ -1,20 +1,34 @@
 import React from 'react'
 import { Select, Spinner } from 'flowbite-react'
-import { Filter, Users, TrendingUp, BookOpen, GraduationCap, Download, CheckCircle, XCircle } from 'lucide-react'
+import { Filter, Download, CheckCircle, XCircle, Loader2, ChevronDown, ChevronUp } from 'lucide-react'
+import { useSelector } from 'react-redux'
 
 const LevelResult = () => {
+  const [previousCumulative, setPreviousCumulative] = React.useState([])
+  const [currentCourses, setCurrentCourses] = React.useState([])
+  const [semesterSummary, setSemesterSummary] = React.useState([])
+  const [carryovers, setCarryovers] = React.useState([])
   const [programmes, setProgrammes] = React.useState([])
   const [levels, setLevels] = React.useState([])
   const [selectedProgramme, setSelectedProgramme] = React.useState('')
   const [selectedLevel, setSelectedLevel] = React.useState('')
-  const [students, setStudents] = React.useState([])
-  const [loading, setLoading] = React.useState(false)
+  const [loading, setLoading] = React.useState(true)
+  const [initializing, setInitializing] = React.useState(true)
   const [sessionInfo, setSessionInfo] = React.useState({ session: '', semester: '' })
-  const [actionLoading, setActionLoading] = React.useState(false)
-  
-  // Pagination state
-  const [currentPage, setCurrentPage] = React.useState(1)
+  const [actionState, setActionState] = React.useState('')
+
+  const [currentPage1, setCurrentPage1] = React.useState(1)
+  const [currentPage2, setCurrentPage2] = React.useState(1)
+  const [currentPage3, setCurrentPage3] = React.useState(1)
+  const [currentPage4, setCurrentPage4] = React.useState(1)
   const itemsPerPage = 20
+
+  const [isTable1Collapsed, setIsTable1Collapsed] = React.useState(false)
+  const [isTable2Collapsed, setIsTable2Collapsed] = React.useState(false)
+  const [isTable3Collapsed, setIsTable3Collapsed] = React.useState(false)
+  const [isTable4Collapsed, setIsTable4Collapsed] = React.useState(false)
+
+  const hodId = useSelector((state) => state.user.department)
 
   React.useEffect(() => {
     fetchProgrammesAndLevels()
@@ -22,214 +36,243 @@ const LevelResult = () => {
 
   React.useEffect(() => {
     if (selectedProgramme && selectedLevel) {
-      fetchLevelResults()
+      fetchAllResults(selectedProgramme, selectedLevel)
     }
   }, [selectedProgramme, selectedLevel])
 
+  const getRequestBody = (programmeId = selectedProgramme, levelId = selectedLevel) => ({
+    ProgrammeID: programmeId,
+    LevelID: levelId
+  })
+
   const fetchProgrammesAndLevels = async () => {
     try {
-      const response = await fetch('/api/hod/results/programmes-levels/1', { credentials: 'include' })
-      if (response.ok) {
-        const data = await response.json()
-        setProgrammes(data.programmes || [])
-        setLevels(data.levels || [])
-        // Auto-select first programme and level if available
-        if (data.programmes && data.programmes.length > 0) {
-          setSelectedProgramme(data.programmes[0].ProgrammeID.toString())
-        }
-        if (data.levels && data.levels.length > 0) {
-          setSelectedLevel(data.levels[0].LevelID.toString())
-        }
+      setInitializing(true)
+      const response = await fetch('/api/hod/results/programmes-levels/', { credentials: 'include' })
+      if (!response.ok) {
+        throw new Error('Failed to fetch programmes and levels')
+      }
+
+      const data = await response.json()
+      const fetchedProgrammes = data.programmes || []
+      const fetchedLevels = data.levels || []
+
+      setProgrammes(fetchedProgrammes)
+      setLevels(fetchedLevels)
+
+      if (fetchedProgrammes.length > 0) {
+        setSelectedProgramme(String(fetchedProgrammes[0].ProgrammeID))
+      }
+      if (fetchedLevels.length > 0) {
+        setSelectedLevel(String(fetchedLevels[0].LevelID))
       }
     } catch (error) {
       console.error('Error fetching programmes and levels:', error)
+    } finally {
+      setInitializing(false)
     }
   }
 
-  const fetchLevelResults = async () => {
-    if (!selectedProgramme || !selectedLevel) return
-
-    setLoading(true)
+  const fetchAllResults = async (programmeId = selectedProgramme, levelId = selectedLevel) => {
     try {
-      const response = await fetch(`/api/hod/results/levelResults/1?programmeID=${selectedProgramme}&levelId=${selectedLevel}`, { credentials: 'include' })
-      
-      if (response.ok) {
-        const data = await response.json()
-        setStudents(data.students || [])
-        setSessionInfo({ session: data.session, semester: data.semester })
+      setLoading(true)
+
+      const buildRequestOptions = () => ({
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(getRequestBody(programmeId, levelId))
+      })
+
+      const [prevCumRes, currentCoursesRes, summaryRes, carryoversRes] = await Promise.all([
+        fetch('/api/hod/results/previous-cumulative', buildRequestOptions()),
+        fetch('/api/hod/results/current-courses', buildRequestOptions()),
+        fetch('/api/hod/results/semester-summary', buildRequestOptions()),
+        fetch('/api/hod/results/carryovers', buildRequestOptions())
+      ])
+
+      if (prevCumRes.ok) {
+        const data = await prevCumRes.json()
+        setPreviousCumulative(data.data || [])
       } else {
-        console.error('Failed to fetch level results')
-        setStudents([])
+        setPreviousCumulative([])
       }
+
+      if (currentCoursesRes.ok) {
+        const data = await currentCoursesRes.json()
+        setCurrentCourses(data.students || [])
+        setSessionInfo({ session: data.session || '', semester: data.semester || '' })
+      } else {
+        setCurrentCourses([])
+      }
+
+      if (summaryRes.ok) {
+        const data = await summaryRes.json()
+        setSemesterSummary(data.data || [])
+      } else {
+        setSemesterSummary([])
+      }
+
+      if (carryoversRes.ok) {
+        const data = await carryoversRes.json()
+        setCarryovers(data.students || [])
+      } else {
+        setCarryovers([])
+      }
+
+      setCurrentPage1(1)
+      setCurrentPage2(1)
+      setCurrentPage3(1)
+      setCurrentPage4(1)
     } catch (error) {
       console.error('Error fetching level results:', error)
-      setStudents([])
+      setPreviousCumulative([])
+      setCurrentCourses([])
+      setSemesterSummary([])
+      setCarryovers([])
     } finally {
       setLoading(false)
     }
   }
 
-  const handleDownload = async () => {
-    if (!selectedProgramme || !selectedLevel) {
-      alert('Please select both programme and level')
-      return
-    }
+  const handleDownloadResults = async () => {
+    if (!selectedProgramme || !selectedLevel) return
 
-    setActionLoading(true)
+    setActionState('download')
     try {
-      const response = await fetch(`/api/hod/results/downloadLevelResults/1?programmeID=${selectedProgramme}&levelId=${selectedLevel}`, {
+      const params = new URLSearchParams({
+        programmeID: selectedProgramme,
+        levelId: selectedLevel
+      })
+
+      const response = await fetch(`/api/hod/results/downloadLevelResults/${hodId}?${params.toString()}`, {
         method: 'GET',
         credentials: 'include'
       })
 
       if (!response.ok) {
-        alert('Failed to download results')
+        const data = await response.json().catch(() => null)
+        alert(data?.message || 'Failed to download results')
         return
       }
 
-      // Get filename from Content-Disposition header
       const contentDisposition = response.headers.get('Content-Disposition')
-      let filename = 'level_results.xlsx'
-      
+      let filename = 'Level_Results.xlsx'
       if (contentDisposition) {
-        const matches = /filename="([^"]+)"/.exec(contentDisposition)
-        if (matches && matches[1]) {
-          filename = matches[1]
+        const filenameMatch = contentDisposition.match(/filename="?(.+)"?/) 
+        if (filenameMatch?.[1]) {
+          filename = filenameMatch[1]
         }
       }
 
-      // Create blob and download
       const blob = await response.blob()
       const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = filename
-      document.body.appendChild(a)
-      a.click()
-      
-      // Cleanup
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = filename
+      document.body.appendChild(anchor)
+      anchor.click()
       window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
-
+      document.body.removeChild(anchor)
     } catch (error) {
       console.error('Error downloading results:', error)
-      alert('An error occurred while downloading the file')
+      alert('An error occurred while downloading results')
     } finally {
-      setActionLoading(false)
+      setActionState('')
     }
   }
 
-  const handleApprove = async () => {
-    if (!selectedProgramme || !selectedLevel) {
-      alert('Please select both programme and level')
+  const handleApproveResults = async () => {
+    if (!selectedProgramme || !selectedLevel) return
+    if (!window.confirm('Approve these advisor-approved level results for senate review?')) {
       return
     }
 
-    if (!confirm('Are you sure you want to approve these level results?')) {
-      return
-    }
-
-    setActionLoading(true)
+    setActionState('approve')
     try {
-      const response = await fetch(`/api/hod/results/approveLevelResults/1`, {
+      const response = await fetch(`/api/hod/results/approveLevelResults/${hodId}`, {
         method: 'PUT',
         credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          levelId: parseInt(selectedLevel),
-          programmeID: parseInt(selectedProgramme)
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(getRequestBody())
       })
 
+      const data = await response.json().catch(() => ({}))
       if (!response.ok) {
-        alert('Failed to approve results')
+        alert(data.message || 'Failed to approve level results')
         return
       }
 
-      const data = await response.json()
       alert(data.message || 'Level results approved successfully')
-      
-      // Refresh the results
-      fetchLevelResults()
-
+      await fetchAllResults()
     } catch (error) {
-      console.error('Error approving results:', error)
-      alert('An error occurred while approving results')
+      console.error('Error approving level results:', error)
+      alert('An error occurred while approving level results')
     } finally {
-      setActionLoading(false)
+      setActionState('')
     }
   }
 
-  const handleReject = async () => {
-    if (!selectedProgramme || !selectedLevel) {
-      alert('Please select both programme and level')
+  const handleRejectResults = async () => {
+    if (!selectedProgramme || !selectedLevel) return
+    if (!window.confirm('Reject these level results and keep them from senate review?')) {
       return
     }
 
-    if (!confirm('Are you sure you want to reject these level results?')) {
-      return
-    }
-
-    setActionLoading(true)
+    setActionState('reject')
     try {
-      const response = await fetch(`/api/hod/results/rejectLevelResults/1`, {
+      const response = await fetch(`/api/hod/results/rejectLevelResults/${hodId}`, {
         method: 'PUT',
         credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          levelId: parseInt(selectedLevel),
-          programmeID: parseInt(selectedProgramme)
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(getRequestBody())
       })
 
+      const data = await response.json().catch(() => ({}))
       if (!response.ok) {
-        alert('Failed to reject results')
+        alert(data.message || 'Failed to reject level results')
         return
       }
 
-      const data = await response.json()
       alert(data.message || 'Level results rejected successfully')
-      
-      // Refresh the results
-      fetchLevelResults()
-
+      await fetchAllResults()
     } catch (error) {
-      console.error('Error rejecting results:', error)
-      alert('An error occurred while rejecting results')
+      console.error('Error rejecting level results:', error)
+      alert('An error occurred while rejecting level results')
     } finally {
-      setActionLoading(false)
+      setActionState('')
     }
   }
 
-  const Pagination = ({ currentPage, setCurrentPage, totalItems }) => {
-    const totalPages = Math.ceil(totalItems.length / itemsPerPage)
+  const paginate = (items, currentPage) => {
+    const startIndex = (currentPage - 1) * itemsPerPage
+    return items.slice(startIndex, startIndex + itemsPerPage)
+  }
 
-    if (totalItems.length === 0) return null
+  const getTotalPages = (items) => Math.ceil(items.length / itemsPerPage)
+
+  const PaginationControls = ({ currentPage, setCurrentPage, totalItems }) => {
+    const totalPages = getTotalPages(totalItems)
+    if (totalPages <= 1) return null
 
     return (
-      <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-t">
-        <div className="text-sm text-gray-700">
+      <div className='flex items-center justify-between px-4 py-3 border-t bg-gray-50'>
+        <div className='text-sm text-gray-700'>
           Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, totalItems.length)} of {totalItems.length} entries
         </div>
-        <div className="flex gap-2">
+        <div className='flex gap-2'>
           <button
             onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
             disabled={currentPage === 1}
-            className="px-3 py-1 text-sm border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+            className='px-3 py-1 text-sm border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100'
           >
             Previous
           </button>
-          <span className="px-3 py-1 text-sm">
-            Page {currentPage} of {totalPages}
-          </span>
+          <span className='px-3 py-1 text-sm'>Page {currentPage} of {totalPages}</span>
           <button
             onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
             disabled={currentPage === totalPages}
-            className="px-3 py-1 text-sm border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+            className='px-3 py-1 text-sm border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100'
           >
             Next
           </button>
@@ -238,27 +281,62 @@ const LevelResult = () => {
     )
   }
 
-  if (loading && !selectedProgramme && !selectedLevel) {
+  const selectedProgrammeName = programmes.find((programme) => String(programme.ProgrammeID) === selectedProgramme)?.ProgrammeName
+  const selectedLevelName = levels.find((level) => String(level.LevelID) === selectedLevel)?.LevelName
+
+  if (initializing) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <Spinner size="xl" />
+      <div className='flex items-center justify-center h-screen'>
+        <Spinner size='xl' />
       </div>
     )
   }
 
   return (
-    <div className='flex flex-col gap-4 p-4'>
-      {/* Header */}
-      <div className='flex flex-col gap-2 mb-4'>
-        <h1 className='text-2xl font-bold text-black'>Level Results</h1>
-        <p className='text-sm text-slate-600'>
-          View advisor-approved results by programme and level
-          {sessionInfo.session && ` - ${sessionInfo.semester} Semester, ${sessionInfo.session}`}
-        </p>
+    <main className='flex flex-col w-full p-4 gap-6'>
+      <div className='flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between'>
+        <div className='py-2'>
+          <h1 className='text-3xl font-bold text-black'>Level Results</h1>
+          <p className='text-sm text-slate-500'>
+            HOD review of advisor-approved level results before senate can access them
+            {sessionInfo.session && sessionInfo.semester && ` for ${sessionInfo.semester} Semester, ${sessionInfo.session}`}
+          </p>
+          {selectedProgrammeName && selectedLevelName && (
+            <p className='text-sm text-slate-600 mt-1'>Currently viewing {selectedProgrammeName} - {selectedLevelName}</p>
+          )}
+        </div>
+
+        <div className='flex flex-wrap items-center gap-3'>
+          <button
+            onClick={handleDownloadResults}
+            disabled={!selectedProgramme || !selectedLevel || actionState !== ''}
+            className='flex items-center gap-2 px-4 py-2 font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
+          >
+            {actionState === 'download' ? <Loader2 size={18} className='animate-spin' /> : <Download size={18} />}
+            {actionState === 'download' ? 'Downloading...' : 'Download Results'}
+          </button>
+
+          <button
+            onClick={handleApproveResults}
+            disabled={!selectedProgramme || !selectedLevel || actionState !== ''}
+            className='flex items-center gap-2 px-4 py-2 font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
+          >
+            {actionState === 'approve' ? <Loader2 size={18} className='animate-spin' /> : <CheckCircle size={18} />}
+            {actionState === 'approve' ? 'Approving...' : 'Approve For Senate'}
+          </button>
+
+          {/* <button
+            onClick={handleRejectResults}
+            disabled={!selectedProgramme || !selectedLevel || actionState !== ''}
+            className='flex items-center gap-2 px-4 py-2 font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
+          >
+            {actionState === 'reject' ? <Loader2 size={18} className='animate-spin' /> : <XCircle size={18} />}
+            {actionState === 'reject' ? 'Rejecting...' : 'Reject Results'}
+          </button> */}
+        </div>
       </div>
 
-      {/* Filters */}
-      <div className='bg-white p-4 rounded-lg shadow-sm'>
+      <section className='bg-white p-4 rounded-lg shadow-sm'>
         <div className='flex items-center gap-2 mb-4'>
           <Filter size={20} />
           <h2 className='font-semibold'>Filters</h2>
@@ -266,11 +344,8 @@ const LevelResult = () => {
         <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>Programme</label>
-            <Select
-              value={selectedProgramme}
-              onChange={(e) => setSelectedProgramme(e.target.value)}
-            >
-              <option value="">Select Programme</option>
+            <Select value={selectedProgramme} onChange={(e) => setSelectedProgramme(e.target.value)}>
+              <option value=''>Select Programme</option>
               {programmes.map((programme) => (
                 <option key={programme.ProgrammeID} value={programme.ProgrammeID}>
                   {programme.ProgrammeName}
@@ -280,11 +355,8 @@ const LevelResult = () => {
           </div>
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>Level</label>
-            <Select
-              value={selectedLevel}
-              onChange={(e) => setSelectedLevel(e.target.value)}
-            >
-              <option value="">Select Level</option>
+            <Select value={selectedLevel} onChange={(e) => setSelectedLevel(e.target.value)}>
+              <option value=''>Select Level</option>
               {levels.map((level) => (
                 <option key={level.LevelID} value={level.LevelID}>
                   {level.LevelName}
@@ -293,169 +365,277 @@ const LevelResult = () => {
             </Select>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Action Buttons */}
-      {!loading && selectedProgramme && selectedLevel && students.length > 0 && (
-        <div className='bg-white p-4 rounded-lg shadow-sm'>
-          <div className='flex items-center gap-3'>
-            <button
-              onClick={handleDownload}
-              disabled={actionLoading}
-              className='flex items-center gap-2 px-4 py-2 text-green-600 hover:bg-green-50 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-green-300'
-            >
-              <Download size={16} />
-              Download Results
-            </button>
-            <button
-              onClick={handleApprove}
-              disabled={actionLoading}
-              className='flex items-center gap-2 px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
-            >
-              <CheckCircle size={16} />
-              Approve Results
-            </button>
-            <button
-              onClick={handleReject}
-              disabled={actionLoading}
-              className='flex items-center gap-2 px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
-            >
-              <XCircle size={16} />
-              Reject Results
-            </button>
-          </div>
+      {loading ? (
+        <div className='flex items-center justify-center py-20'>
+          <Spinner size='xl' />
         </div>
-      )}
-
-      {loading && selectedProgramme && selectedLevel && (
-        <div className="flex items-center justify-center py-20">
-          <Spinner size="xl" />
-        </div>
-      )}
-
-      {!loading && selectedProgramme && selectedLevel && students.length > 0 && (
+      ) : (
         <>
-          {/* Summary Statistics */}
-          <div className='grid grid-cols-1 md:grid-cols-4 gap-4'>
-            <div className='bg-white p-4 rounded-lg shadow-sm'>
-              <div className='flex items-center justify-between'>
-                <div>
-                  <p className='text-sm text-gray-500'>Total Students</p>
-                  <p className='text-2xl font-bold text-gray-900'>{students.length}</p>
-                </div>
-                <Users size={32} className='text-blue-500' />
-              </div>
-            </div>
-            <div className='bg-white p-4 rounded-lg shadow-sm'>
-              <div className='flex items-center justify-between'>
-                <div>
-                  <p className='text-sm text-gray-500'>Average GPA</p>
-                  <p className='text-2xl font-bold text-gray-900'>
-                    {students.length > 0 
-                      ? (students.reduce((sum, s) => sum + (s.GPA || 0), 0) / students.length).toFixed(2)
-                      : '0.00'}
-                  </p>
-                </div>
-                <TrendingUp size={32} className='text-green-500' />
-              </div>
-            </div>
-            <div className='bg-white p-4 rounded-lg shadow-sm'>
-              <div className='flex items-center justify-between'>
-                <div>
-                  <p className='text-sm text-gray-500'>Average CGPA</p>
-                  <p className='text-2xl font-bold text-gray-900'>
-                    {students.length > 0 
-                      ? (students.reduce((sum, s) => sum + (s.CGPA || 0), 0) / students.length).toFixed(2)
-                      : '0.00'}
-                  </p>
-                </div>
-                <GraduationCap size={32} className='text-purple-500' />
-              </div>
-            </div>
-            <div className='bg-white p-4 rounded-lg shadow-sm'>
-              <div className='flex items-center justify-between'>
-                <div>
-                  <p className='text-sm text-gray-500'>Total Courses</p>
-                  <p className='text-2xl font-bold text-gray-900'>
-                    {students[0]?.courses.length || 0}
-                  </p>
-                </div>
-                <BookOpen size={32} className='text-orange-500' />
-              </div>
-            </div>
-          </div>
+          <section className='bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-900'>
+            These results have been approved at advisor level and are awaiting final HOD decision before senate can view them.
+          </section>
 
-          {/* Student Results Table */}
-          <div className='bg-white rounded-lg shadow-sm overflow-hidden'>
-            <div className='p-4 border-b border-gray-200'>
-              <h2 className='font-semibold text-lg'>Student Results</h2>
-              <p className='text-sm text-gray-500'>Individual student performance with courses and GPA</p>
+          <section className='bg-white rounded-lg shadow-sm'>
+            <div className='p-4 border-b border-gray-200 flex items-center justify-between cursor-pointer hover:bg-gray-50' onClick={() => setIsTable1Collapsed(!isTable1Collapsed)}>
+              <div>
+                <h2 className='font-semibold text-lg'>Previous Cumulative Results</h2>
+                <p className='text-sm text-gray-500'>Academic performance up to, but not including, the current semester</p>
+              </div>
+              <button className='p-2'>
+                {isTable1Collapsed ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
+              </button>
             </div>
+            {!isTable1Collapsed && (
+              <>
+                <div className='overflow-x-auto'>
+                  <table className='w-full text-sm'>
+                    <thead className='bg-gray-50 border-b'>
+                      <tr>
+                        <th className='px-4 py-3 text-left font-semibold'>S/N</th>
+                        <th className='px-4 py-3 text-left font-semibold'>Matric No</th>
+                        <th className='px-4 py-3 text-center font-semibold'>Core Units</th>
+                        <th className='px-4 py-3 text-center font-semibold'>Total Units</th>
+                        <th className='px-4 py-3 text-center font-semibold'>Units Passed</th>
+                        <th className='px-4 py-3 text-center font-semibold'>Cum. Points</th>
+                        <th className='px-4 py-3 text-center font-semibold'>CGPA</th>
+                        <th className='px-4 py-3 text-center font-semibold'>O/S</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {previousCumulative.length === 0 ? (
+                        <tr>
+                          <td colSpan='8' className='px-4 py-8 text-center text-gray-500'>No previous cumulative data available for this programme and level</td>
+                        </tr>
+                      ) : (
+                        paginate(previousCumulative, currentPage1).map((student, idx) => (
+                          <tr key={student.MatNo || student.MatricNo} className='border-b hover:bg-gray-50'>
+                            <td className='px-4 py-3'>{((currentPage1 - 1) * itemsPerPage) + idx + 1}</td>
+                            <td className='px-4 py-3 font-medium'>{student.MatNo || student.MatricNo}</td>
+                            <td className='px-4 py-3 text-center'>{student.TotalCoreUnits || 0}</td>
+                            <td className='px-4 py-3 text-center'>{student.TotalUnitsTaken || 0}</td>
+                            <td className='px-4 py-3 text-center'>{student.TotalUnitsPassed || 0}</td>
+                            <td className='px-4 py-3 text-center'>{student.CumulativeGradePoints || 0}</td>
+                            <td className='px-4 py-3 text-center font-semibold'>{student.CGPA || '0.00'}</td>
+                            <td className='px-4 py-3 text-center text-red-600 font-medium'>{student.CoreUnitsFailed || 0}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                <PaginationControls currentPage={currentPage1} setCurrentPage={setCurrentPage1} totalItems={previousCumulative} />
+              </>
+            )}
+          </section>
 
-            <div className='overflow-x-auto'>
-              <table className='w-full'>
-                <thead className='bg-gray-50 border-b'>
-                  <tr>
-                    <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase sticky left-0 bg-gray-50 z-20 border-r'>Matric No</th>
-                    <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase sticky left-[120px] bg-gray-50 z-20 border-r'>Student Name</th>
-                    {students[0]?.courses.map((course, idx) => (
-                      <th key={idx} className='px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase min-w-[100px]'>
-                        <div>{course.CourseCode}</div>
-                        <div className="text-xs font-normal text-gray-600">({course.CreditUnits}U)</div>
-                      </th>
-                    ))}
-                    <th className='px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase bg-blue-50 border-l'>GPA</th>
-                    <th className='px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase bg-green-50'>CGPA</th>
-                    <th className='px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase bg-gray-100'>Units</th>
-                    <th className='px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase bg-gray-100'>Passed</th>
-                    <th className='px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase bg-gray-100'>Failed</th>
-                  </tr>
-                </thead>
-                <tbody className='bg-white divide-y divide-gray-200'>
-                  {students.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((student, idx) => (
-                    <tr key={idx} className='hover:bg-gray-50'>
-                      <td className='px-4 py-4 text-sm font-medium text-gray-900 sticky left-0 bg-white z-10 border-r'>{student.MatricNo}</td>
-                      <td className='px-4 py-4 text-sm text-gray-900 sticky left-[120px] bg-white z-10 border-r'>{student.StudentName}</td>
-                      {student.courses.map((course, courseIdx) => (
-                        <td key={courseIdx} className='px-4 py-4 text-sm text-center'>
-                          <div className="font-medium text-gray-900">{course.TotalScore}</div>
-                          <div className="text-xs text-gray-600">({course.Grade})</div>
-                        </td>
-                      ))}
-                      <td className='px-4 py-4 text-sm text-center font-semibold bg-blue-50 border-l'>
-                        {student.GPA ? student.GPA.toFixed(2) : '0.00'}
-                      </td>
-                      <td className='px-4 py-4 text-sm text-center font-semibold bg-green-50'>
-                        {student.CGPA ? student.CGPA.toFixed(2) : '0.00'}
-                      </td>
-                      <td className='px-4 py-4 text-sm text-center bg-gray-50'>
-                        {student.TotalCreditUnits || 0}
-                      </td>
-                      <td className='px-4 py-4 text-sm text-center text-green-600 bg-gray-50 font-medium'>
-                        {student.TotalCreditUnitsPassed || 0}
-                      </td>
-                      <td className='px-4 py-4 text-sm text-center text-red-600 bg-gray-50 font-medium'>
-                        {student.TotalCreditUnitsFailed || 0}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <section className='bg-white rounded-lg shadow-sm'>
+            <div className='p-4 border-b border-gray-200 flex items-center justify-between cursor-pointer hover:bg-gray-50' onClick={() => setIsTable2Collapsed(!isTable2Collapsed)}>
+              <div>
+                <h2 className='font-semibold text-lg'>Current Semester Courses</h2>
+                <p className='text-sm text-gray-500'>All approved exam results for the selected level and programme</p>
+              </div>
+              <button className='p-2'>
+                {isTable2Collapsed ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
+              </button>
             </div>
-            
-            <Pagination currentPage={currentPage} setCurrentPage={setCurrentPage} totalItems={students} />
-          </div>
+            {!isTable2Collapsed && (
+              <>
+                <div className='overflow-x-auto'>
+                  {currentCourses.length === 0 ? (
+                    <div className='px-4 py-8 text-center text-gray-500'>No current semester courses found</div>
+                  ) : (
+                    <table className='w-full text-xs border-collapse'>
+                      <thead className='bg-gray-50'>
+                        <tr>
+                          <th className='px-4 py-3 text-left font-semibold border border-gray-300 sticky left-0 bg-gray-50 z-10'>Matric No</th>
+                          <th className='px-4 py-3 text-left font-semibold border border-gray-300 bg-gray-50'>Name</th>
+                          {(() => {
+                            const allCourses = new Map()
+                            currentCourses.forEach((student) => {
+                              student.courses.forEach((course) => {
+                                if (!allCourses.has(course.CourseCode)) {
+                                  allCourses.set(course.CourseCode, {
+                                    CourseCode: course.CourseCode,
+                                    CourseType: course.CourseType,
+                                    CreditUnits: course.CreditUnits
+                                  })
+                                }
+                              })
+                            })
+
+                            return Array.from(allCourses.values()).map((course) => (
+                              <th key={course.CourseCode} className='px-3 py-2 text-center font-semibold border border-gray-300 min-w-[80px]'>
+                                <div className='font-mono font-bold text-sm'>{course.CourseCode}</div>
+                                <div className='text-[10px] font-normal text-gray-600 mt-1'>
+                                  ({course.CreditUnits}U <span className={course.CourseType === 'C' ? 'text-blue-600' : 'text-green-600'}>{course.CourseType === 'C' ? 'C' : 'E'}</span>)
+                                </div>
+                              </th>
+                            ))
+                          })()}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {paginate(currentCourses, currentPage2).map((student) => {
+                          const allCourses = new Map()
+                          currentCourses.forEach((entry) => {
+                            entry.courses.forEach((course) => {
+                              if (!allCourses.has(course.CourseCode)) {
+                                allCourses.set(course.CourseCode, course.CourseCode)
+                              }
+                            })
+                          })
+
+                          return (
+                            <tr key={student.MatricNo} className='border-b hover:bg-gray-50'>
+                              <td className='px-4 py-3 font-mono font-semibold border border-gray-300 sticky left-0 bg-white z-10'>{student.MatricNo}</td>
+                              <td className='px-3 py-3 font-medium border border-gray-300'>{student.LastName} {student.OtherNames}</td>
+                              {Array.from(allCourses.keys()).map((courseCode) => {
+                                const course = student.courses.find((item) => item.CourseCode === courseCode)
+                                return (
+                                  <td key={courseCode} className='px-3 py-3 text-center border border-gray-300'>
+                                    {course ? (
+                                      <span className={`font-semibold text-sm ${
+                                        course.Grade === 'A' ? 'text-green-600' :
+                                        course.Grade === 'B' ? 'text-blue-600' :
+                                        course.Grade === 'C' ? 'text-yellow-600' :
+                                        course.Grade === 'D' ? 'text-orange-600' :
+                                        course.Grade === 'F' ? 'text-red-600' :
+                                        'text-gray-900'
+                                      }`}>
+                                        {course.TotalScore}{course.Grade}
+                                      </span>
+                                    ) : (
+                                      <span className='text-gray-400 text-xs'>-</span>
+                                    )}
+                                  </td>
+                                )
+                              })}
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+                <PaginationControls currentPage={currentPage2} setCurrentPage={setCurrentPage2} totalItems={currentCourses} />
+              </>
+            )}
+          </section>
+
+          <section className='bg-white rounded-lg shadow-sm'>
+            <div className='p-4 border-b border-gray-200 flex items-center justify-between cursor-pointer hover:bg-gray-50' onClick={() => setIsTable3Collapsed(!isTable3Collapsed)}>
+              <div>
+                <h2 className='font-semibold text-lg'>Semester Summary</h2>
+                <p className='text-sm text-gray-500'>Current semester performance and cumulative totals</p>
+              </div>
+              <button className='p-2'>
+                {isTable3Collapsed ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
+              </button>
+            </div>
+            {!isTable3Collapsed && (
+              <>
+                <div className='overflow-x-auto'>
+                  <table className='w-full text-sm'>
+                    <thead className='bg-gray-50'>
+                      <tr>
+                        <th rowSpan='2' className='px-4 py-3 text-left font-semibold border-r'>S/N</th>
+                        <th rowSpan='2' className='px-4 py-3 text-left font-semibold border-r'>Matric No</th>
+                        <th rowSpan='2' className='px-4 py-3 text-left font-semibold border-r'>Name</th>
+                        <th colSpan='5' className='px-4 py-2 text-center font-semibold bg-blue-50 border-b'>Current Semester</th>
+                        <th colSpan='5' className='px-4 py-2 text-center font-semibold bg-green-50 border-l'>Cumulative Total</th>
+                      </tr>
+                      <tr>
+                        <th className='px-4 py-2 text-center font-semibold bg-blue-50'>Total Units</th>
+                        <th className='px-4 py-2 text-center font-semibold bg-blue-50'>Total Passed</th>
+                        <th className='px-4 py-2 text-center font-semibold bg-blue-50'>GP</th>
+                        <th className='px-4 py-2 text-center font-semibold bg-blue-50'>GPA</th>
+                        <th className='px-4 py-2 text-center font-semibold bg-blue-50 border-r'>Units O/S</th>
+                        <th className='px-4 py-2 text-center font-semibold bg-green-50'>Total Units</th>
+                        <th className='px-4 py-2 text-center font-semibold bg-green-50'>Total Passed</th>
+                        <th className='px-4 py-2 text-center font-semibold bg-green-50'>GP</th>
+                        <th className='px-4 py-2 text-center font-semibold bg-green-50'>CGPA</th>
+                        <th className='px-4 py-2 text-center font-semibold bg-green-50'>O/S Units</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {semesterSummary.length === 0 ? (
+                        <tr>
+                          <td colSpan='13' className='px-4 py-8 text-center text-gray-500'>No summary data available</td>
+                        </tr>
+                      ) : (
+                        paginate(semesterSummary, currentPage3).map((student, idx) => (
+                          <tr key={student.MatNo} className='border-b hover:bg-gray-50'>
+                            <td className='px-4 py-3 border-r'>{((currentPage3 - 1) * itemsPerPage) + idx + 1}</td>
+                            <td className='px-4 py-3 font-medium border-r'>{student.MatNo}</td>
+                            <td className='px-4 py-3 font-medium border-r'>{student.LastName} {student.OtherNames}</td>
+                            <td className='px-4 py-3 text-center bg-blue-50'>{student.CurrentSemesterUnits || 0}</td>
+                            <td className='px-4 py-3 text-center bg-blue-50'>{student.CurrentSemesterUnitsPassed || 0}</td>
+                            <td className='px-4 py-3 text-center bg-blue-50'>{student.CurrentSemesterGradePoints || 0}</td>
+                            <td className='px-4 py-3 text-center bg-blue-50 font-semibold'>{student.CurrentGPA || '0.00'}</td>
+                            <td className='px-4 py-3 text-center bg-blue-50 text-red-600 border-r'>{student.CurrentCoreUnitsFailed || 0}</td>
+                            <td className='px-4 py-3 text-center bg-green-50'>{student.CumulativeUnits || 0}</td>
+                            <td className='px-4 py-3 text-center bg-green-50'>{student.CumulativeUnitsPassed || 0}</td>
+                            <td className='px-4 py-3 text-center bg-green-50'>{student.CumulativeGradePoints || 0}</td>
+                            <td className='px-4 py-3 text-center bg-green-50 font-semibold text-lg'>{student.CGPA || '0.00'}</td>
+                            <td className='px-4 py-3 text-center bg-green-50 text-red-600'>{student.CumulativeCoreUnitsFailed || 0}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                <PaginationControls currentPage={currentPage3} setCurrentPage={setCurrentPage3} totalItems={semesterSummary} />
+              </>
+            )}
+          </section>
+
+          <section className='bg-white rounded-lg shadow-sm'>
+            <div className='p-4 border-b border-gray-200 flex items-center justify-between cursor-pointer hover:bg-gray-50' onClick={() => setIsTable4Collapsed(!isTable4Collapsed)}>
+              <div>
+                <h2 className='font-semibold text-lg'>Carryover Courses</h2>
+                <p className='text-sm text-gray-500'>Failed core courses from the previous semester</p>
+              </div>
+              <button className='p-2'>
+                {isTable4Collapsed ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
+              </button>
+            </div>
+            {!isTable4Collapsed && (
+              <>
+                <div className='overflow-x-auto'>
+                  {carryovers.length === 0 ? (
+                    <div className='px-4 py-8 text-center text-gray-500'>No carryover courses found</div>
+                  ) : (
+                    <table className='w-full text-sm border-collapse'>
+                      <thead className='bg-gray-50 border-b-2'>
+                        <tr>
+                          <th className='px-4 py-3 text-left font-semibold border'>S/N</th>
+                          <th className='px-4 py-3 text-left font-semibold border'>Matric No</th>
+                          <th className='px-4 py-3 text-left font-semibold border'>Carryover Courses</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {paginate(carryovers, currentPage4).map((student, idx) => (
+                          <tr key={student.MatricNo} className='border-b hover:bg-gray-50'>
+                            <td className='px-4 py-3 border'>{((currentPage4 - 1) * itemsPerPage) + idx + 1}</td>
+                            <td className='px-4 py-3 font-mono font-semibold border'>{student.MatricNo}</td>
+                            <td className='px-4 py-3 border'>
+                              <span className='font-mono text-red-600 font-semibold'>{student.failedCourses.map((course) => course.CourseCode).join(', ')}</span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+                <PaginationControls currentPage={currentPage4} setCurrentPage={setCurrentPage4} totalItems={carryovers} />
+              </>
+            )}
+          </section>
         </>
       )}
-
-      {!loading && selectedProgramme && selectedLevel && students.length === 0 && (
-        <div className='flex flex-col justify-center items-center py-20 text-gray-500 bg-white rounded-lg shadow-sm'>
-          <GraduationCap size={48} className='mb-4 text-gray-300' />
-          <p className='text-lg font-medium'>No results found</p>
-          <p className='text-sm'>No approved results available for the selected programme and level</p>
-        </div>
-      )}
-    </div>
+    </main>
   )
 }
 

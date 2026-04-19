@@ -27,7 +27,7 @@ const AllCourseTable = () => {
      
         const handler = setTimeout(() => {
             setDebouncedTerm(searchTerm)
-        }, 1000); // 1 second debounce
+        }, 1000); 
         return () => {
             clearTimeout(handler);
         };

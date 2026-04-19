@@ -1,6 +1,6 @@
-import React, { useState, useEffect, use } from 'react'
-import { Select, TextInput, Spinner, Modal, Progress, ModalBody, ModalHeader } from 'flowbite-react'
-import { Search, Filter, Eye, CheckCircle, XCircle, Clock, FileSpreadsheet, AlertCircle, Download } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { Select, TextInput, Spinner, Modal, ModalBody, ModalHeader } from 'flowbite-react'
+import { Search, Filter, Eye, CheckCircle, Download } from 'lucide-react'
 import Button from '../../components/ui/Button'
 import { useSelector } from 'react-redux'
 
@@ -14,6 +14,9 @@ const ReviewTestResults = () => {
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState([]); //for the view details modal
   const [actionLoading, setActionLoading] = useState(false);
+  const [sessions, setSessions] = useState([]);
+  const [semesters, setSemesters] = useState([]);
+  const [levels, setLevels] = useState([]);
 
   const hodId = useSelector((state) => state.user.department);
 
@@ -21,18 +24,61 @@ const ReviewTestResults = () => {
  
 
   useEffect(() => {
-   
+    fetchSessions();
+    fetchActiveSemester();
+    fetchLevels();
+  }, []);
+
+  useEffect(() => {
     fetchTestResults();
-  }, [selectedSemester, selectedLevel, searchTerm]);
+  }, [hodId, selectedSemester, selectedLevel, searchTerm]);
 
  
+const fetchSessions = async () => {
+  try {
+    const response = await fetch('/api/sessions/active-session', { credentials: 'include' });
+    if (response.ok) {
+      const data = await response.json();
+      setSessions(data.session ? [data.session] : []);
+      setSelectedSession(data.session ? data.session.SessionID : '');
+    }
+  } catch (error) {
+    console.error('Error fetching sessions:', error);
+  }
+}
 
+const fetchActiveSemester = async () => {
+  try {
+    const response = await fetch('/api/sessions/getActiveSemester', { credentials: 'include' });
+    if (!response.ok) {
+      throw new Error('Failed to fetch active semester');
+    }
+    const data = await response.json();
+    setSemesters(data.semester ? [data.semester] : []);
+    setSelectedSemester(data.semester ? data.semester.SemesterID : '');
+  } catch (error) {
+    console.error('Error fetching active semester:', error);
+  }
+}
 
+const fetchLevels = async () => {
+  try {
+    const response = await fetch('/api/levels/getLevels', { credentials: 'include' });
+    if (!response.ok) {
+      throw new Error('Failed to fetch levels');
+    }
+    const data = await response.json();
+    setLevels(data.levels || []);
+  } catch (error) {
+    console.error('Error fetching levels:', error);
+  }
+}
 
 const fetchTestResults = async () =>{
 
 
   try{
+  setLoading(true);
     
   const params = new URLSearchParams();
   if (selectedSemester) params.append('semesterID', selectedSemester);
@@ -58,6 +104,8 @@ const fetchTestResults = async () =>{
 
   }catch(error){
      console.error("fetchTestResults error:", error);
+  } finally {
+    setLoading(false);
   }
   
 }
@@ -209,22 +257,29 @@ const handleDownload = async (courseID, staffCode) => {
           <h2 className='font-semibold'>Filters</h2>
         </div>
         <div className='grid grid-cols-1 md:grid-cols-4 gap-4'>
-          <Select >
+          <Select value={selectedSession} onChange={(e) => setSelectedSession(e.target.value)}>
             <option value="">All Sessions</option>
-            <option value="2024/2025">2024/2025</option>
-            <option value="2023/2024">2023/2024</option>
+            {sessions.map((session) => (
+              <option key={session.SessionID} value={session.SessionID}>
+                {session.SessionName}
+              </option>
+            ))}
           </Select>
           <Select value={selectedSemester} onChange={(e) => setSelectedSemester(e.target.value)}>
             <option value="">All Semesters</option>
-            <option value="First">First Semester</option>
-            <option value="Second">Second Semester</option>
+            {semesters.map((semester) => (
+              <option key={semester.SemesterID} value={semester.SemesterID}>
+                {semester.SemesterName}
+              </option>
+            ))}
           </Select>
           <Select value={selectedLevel} onChange={(e) => setSelectedLevel(e.target.value)}>
             <option value="">All Levels</option>
-            <option value="100L">100 Level</option>
-            <option value="200L">200 Level</option>
-            <option value="300L">300 Level</option>
-            <option value="400L">400 Level</option>
+            {levels.map((level) => (
+              <option key={level.LevelID} value={level.LevelID}>
+                {level.LevelName}
+              </option>
+            ))}
           </Select>
           <TextInput
             icon={Search}
@@ -242,7 +297,12 @@ const handleDownload = async (courseID, staffCode) => {
           <p className='text-sm text-gray-500'>Review submissions waiting for approval</p>
         </div>
 
-        { submissions.length === 0 ? (
+        {loading ? (
+          <div className='flex justify-center items-center py-20'>
+            <Spinner size='xl' />
+            <span className='ml-3 text-gray-600'>Loading test results...</span>
+          </div>
+        ) : submissions.length === 0 ? (
           <div className='flex flex-col justify-center items-center py-20 text-gray-500'>
             <CheckCircle size={48} className='mb-4 text-gray-300' />
             <p className='text-lg font-medium'>No pending submissions</p>

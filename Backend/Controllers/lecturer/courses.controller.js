@@ -50,7 +50,6 @@ export const getCourses = async (req, res, next) => {
             .query(`
                 SELECT 
                     s.StaffId,
-                    s.StaffNo,
                     c.course_id,
                     c.course_code,
                     c.course_title,

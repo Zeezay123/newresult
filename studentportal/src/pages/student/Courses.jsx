@@ -26,10 +26,10 @@ const Courses = () => {
       );
 
       // Fetch failed core courses
-      const failedRes = await fetch(
-        `/api/students/results/failed-core-courses/?MatricNo=${studentID}`,
-        { credentials: 'include' }
-      );
+          const failedRes = await fetch(
+            `/api/students/results/failed-core-courses/?MatricNo=${studentID}`,
+            { credentials: 'include' }
+          );
 
       // Fetch missed core courses (unregistered)
       const missedRes = await fetch(
@@ -59,13 +59,13 @@ const Courses = () => {
   };
 
   // Group passed courses by type
-  const coreCourses = passedCourses.filter(c => c.CourseType === 'core' || c.CourseType === 'Compulsory');
-  const electiveCourses = passedCourses.filter(c => c.CourseType === 'Elective');
-  const otherCourses = passedCourses.filter(c => c.CourseType !== 'core' && c.CourseType !== 'Compulsory' && c.CourseType !== 'Elective');
+  const coreCourses = passedCourses.filter(c => c.CourseType === 'C' || c.CourseType === 'Compulsory');
+  const electiveCourses = passedCourses.filter(c => c.CourseType === 'E' || c.CourseType === 'Elective');
+  const otherCourses = passedCourses.filter(c => c.CourseType !== 'C' && c.CourseType !== 'Compulsory' && c.CourseType !== 'E' && c.CourseType !== 'Elective');
 
-  const totalPassedUnits = passedCourses.reduce((sum, course) => sum + (course.CreditUnits || 0), 0);
-  const totalFailedUnits = failedCoreCourses.reduce((sum, course) => sum + (course.CreditUnits || 0), 0);
-  const totalMissedUnits = missedCoreCourses.reduce((sum, course) => sum + (course.CreditUnits || 0), 0);
+  const totalPassedUnits = passedCourses.reduce((sum, course) => sum + (course.credit_unit || 0), 0);
+  const totalFailedUnits = failedCoreCourses.reduce((sum, course) => sum + (course.credit_unit || 0), 0);
+  const totalMissedUnits = missedCoreCourses.reduce((sum, course) => sum + (course.credit_unit || 0), 0);
   const totalOutstandingUnits = totalFailedUnits + totalMissedUnits;
 
   return (
@@ -101,7 +101,7 @@ const Courses = () => {
           <div>
             <div className='font-bold text-3xl'>{coreCourses.length}</div>
             <div className='text-xs text-gray-500 mt-1'>
-              {coreCourses.reduce((sum, c) => sum + (c.CreditUnits || 0), 0)} units
+              {coreCourses.reduce((sum, c) => sum + (c.credit_unit || 0), 0)} units
             </div>
           </div>
         </div>
@@ -116,7 +116,7 @@ const Courses = () => {
           <div>
             <div className='font-bold text-3xl'>{electiveCourses.length}</div>
             <div className='text-xs text-gray-500 mt-1'>
-              {electiveCourses.reduce((sum, c) => sum + (c.CreditUnits || 0), 0)} units
+              {electiveCourses.reduce((sum, c) => sum + (c.credit_unit || 0), 0)} units
             </div>
           </div>
         </div>
@@ -217,14 +217,14 @@ const Courses = () => {
                       <tbody>
                         {passedCourses.map((course, index) => (
                           <tr key={index} className='border-b border-slate-100 hover:bg-slate-50'>
-                            <td className='p-4 font-medium text-xs text-slate-800'>{course.CourseCode}</td>
-                            <td className='p-4 text-xs font-medium text-slate-600'>{course.CourseName}</td>
+                            <td className='p-4 font-medium text-xs text-slate-800'>{course.course_code}</td>
+                            <td className='p-4 text-xs font-medium text-slate-600'>{course.course_title}</td>
                             <td className='p-4 text-xs'>
-                              <Badge color={course.CourseType === 'Core' || course.CourseType === 'Compulsory' ? 'info' : 'purple'} size="sm">
-                                {course.CourseType}
+                              <Badge color={course.course_type === 'C' || course.course_type === 'Compulsory' ? 'info' : 'purple'} size="sm">
+                                {course.course_type === 'C' || course.course_type === 'Compulsory' ? 'Core' : 'Elective'}
                               </Badge>
                             </td>
-                            <td className='p-4 text-xs font-medium text-slate-600'>{course.CreditUnits}</td>
+                            <td className='p-4 text-xs font-medium text-slate-600'>{course.credit_unit}</td>
                             <td className='p-4 text-xs'>
                               <Badge 
                                 color={
@@ -284,14 +284,14 @@ const Courses = () => {
                       <tbody>
                         {failedCoreCourses.map((course, index) => (
                           <tr key={index} className='border-b border-slate-100 hover:bg-slate-50'>
-                            <td className='p-4 font-medium text-xs text-slate-800'>{course.CourseCode}</td>
-                            <td className='p-4 text-xs font-medium text-slate-600'>{course.CourseName}</td>
+                            <td className='p-4 font-medium text-xs text-slate-800'>{course.course_code}</td>
+                            <td className='p-4 text-xs font-medium text-slate-600'>{course.course_title}</td>
                             <td className='p-4 text-xs'>
                               <Badge color="failure" size="sm">
-                                {course.CourseType}
+                                {course.course_type === 'C' || course.course_type === 'Compulsory' ? 'Core' : 'Elective'}
                               </Badge>
                             </td>
-                            <td className='p-4 text-xs font-medium text-slate-600'>{course.CreditUnits}</td>
+                            <td className='p-4 text-xs font-medium text-slate-600'>{course.credit_unit}</td>
                             <td className='p-4 text-xs'>
                               <Badge color="failure" size="sm">
                                 {course.Grade}
@@ -342,14 +342,14 @@ const Courses = () => {
                       <tbody>
                         {missedCoreCourses.map((course, index) => (
                           <tr key={index} className='border-b border-slate-100 hover:bg-slate-50'>
-                            <td className='p-4 font-medium text-xs text-slate-800'>{course.CourseCode}</td>
-                            <td className='p-4 text-xs font-medium text-slate-600'>{course.CourseName}</td>
+                            <td className='p-4 font-medium text-xs text-slate-800'>{course.course_code}</td>
+                            <td className='p-4 text-xs font-medium text-slate-600'>{course.course_title}</td>
                             <td className='p-4 text-xs'>
                               <Badge color="warning" size="sm">
-                                {course.CourseType}
+                                {course.course_type === 'C' || course.course_type === 'Compulsory' ? 'Core' : 'Elective'}
                               </Badge>
                             </td>
-                            <td className='p-4 text-xs font-medium text-slate-600'>{course.CreditUnits}</td>
+                            <td className='p-4 text-xs font-medium text-slate-600'>{course.credit_unit}</td>
                             <td className='p-4 text-xs font-medium text-slate-600'>{course.LevelName}</td>
                             <td className='p-4 text-xs font-medium text-slate-600'>{course.SemesterName}</td>
                             <td className='p-4 text-xs'>

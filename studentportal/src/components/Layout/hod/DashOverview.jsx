@@ -23,37 +23,41 @@ fetchDashboardData();
 
  const fetchDashboardData = async () => {
   try{
-    const [courseRes, studentsRes, lecturersCountRes] = await Promise.all([
-      fetch(`/api/hod/courses/stats/${hodId}`, { 
+    const [courseRes, studentsRes, lecturersCountRes, resutlRes] = await Promise.all([
+      fetch(`/api/hod/courses/stats/`, { 
         credentials: 'include',
        
       }),
-      fetch(`/api/hod/students/${hodId}`, { 
+      fetch(`/api/hod/students/`, { 
         credentials: 'include',
        
       }),
       fetch(`/api/hod/lecturers/count`, { 
         credentials: 'include',
       
+      }),
+      fetch(`/api/hod/results/resultstats`, {
+        credentials: 'include',
       })
     ]);
 
-    if(!courseRes.ok || !studentsRes.ok || !lecturersCountRes.ok){
+    if(!courseRes.ok || !studentsRes.ok || !lecturersCountRes.ok || !resutlRes.ok ){
       return console.error("Failed to fetch one or more dashboard data");
     }
 
-    const [coursesData, studentsData, lecturersCountData] = await Promise.all([
+    const [coursesData, studentsData, lecturersCountData, resultsData] = await Promise.all([
       courseRes.json(), 
       studentsRes.json(), 
-      lecturersCountRes.json()
+      lecturersCountRes.json(),
+      resutlRes.json()
     ]);
-
+console.log("Fetched Dashboard Data:", { coursesData, studentsData, lecturersCountData, resultsData });
     // Update dashboard stats with fetched data
     setDashboardStats({
       courses: coursesData.stats?.total || coursesData.courses?.length || 0,
       students: studentsData.students?.length || 0,
       lecturers: lecturersCountData.count || 0,
-      results: 0 // No results fetch yet
+      results: resultsData.stats?.TotalResults || 0
     });
   }catch(err){
     console.error("Error fetching dashboard data:", err);
@@ -80,7 +84,7 @@ fetchDashboardData();
          actualComment = `Active Lecturer${dashboardStats.lecturers !== 1 ? 's' : ''}`;
        } else if (data.name === 'Results') {
          actualNumber = dashboardStats.results;
-         actualComment = 'Empty Result Table';
+         actualComment = `Total Results: ${dashboardStats.results}`;
        }
        
        return (

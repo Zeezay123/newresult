@@ -12,6 +12,7 @@ import {
   Settings2,
   ClipboardList,
   GraduationCap,
+  LogOut
 } from 'lucide-react'
 
 // HOD Sidebar Data
@@ -41,6 +42,11 @@ const hodSidebarData = {
               url: '/hod/assign-course/lecturer',
               icon:UserCog,
             },
+            {
+              name: 'Set Score Type',
+              url: '/hod/scoretpy',
+              icon:Settings2,
+            }
        ]
         }, 
          {
@@ -69,12 +75,31 @@ const hodSidebarData = {
               icon:CheckCircle,
             }]
         },
+
         {
-          name:'Help Center',
-          url:'/help',
-          icon: HelpCircle,
+          name:'Sign Out',
+          url:'/signout',
+          icon: LogOut,
+          items:[]
+        }
+        
+      ]
+    },
+    {
+      title: 'Reports',
+      items:[
+        {
+          name:'Lecturer Report',
+          url:'/hod/lecturer-report',
+          icon: ClipboardList,
           items:[]
         },
+        {
+          name:'Student Report',
+          url:'/hod/student-report',
+          icon: GraduationCap,
+          items:[]
+        }
       ]
     },
   ],
@@ -123,11 +148,11 @@ const lecturerSidebarData = {
           items:[]
         },
         {
-          name:'Help Center',
-          url:'/help',
-          icon: HelpCircle,
+          name:'Sign Out',
+          url:'/signout',
+          icon: LogOut,
           items:[]
-        },
+        }
       ]
     },
   ],
@@ -163,12 +188,12 @@ const studentSidebarData = {
           icon: BookOpen,
           items:[]
         },
-        {
-          name:'Help Center',
-          url:'/help',
-          icon: HelpCircle,
-          items:[]
-        },
+        // {
+        //   name:'Help Center',
+        //   url:'/help',
+        //   icon: HelpCircle,
+        //   items:[]
+        // },
       ]
     },
   ],
@@ -191,12 +216,12 @@ const AdvisorSidebarData = {
     {  
       title: 'General',
       items:[
-        // {
-        //   name:'Dashboard',
-        //   url:'/advisor/dashboard',
-        //   icon: LayoutDashboard,
-        //   items:[]
-        // }, 
+        {
+          name:'Dashboard',
+          url:'/advisor/dashboard',
+          icon: LayoutDashboard,
+          items:[]
+        }, 
       
     
         {
@@ -206,9 +231,9 @@ const AdvisorSidebarData = {
           items:[]
         },
         {
-          name:'Help Center',
-          url:'/help',
-          icon: HelpCircle,
+          name:'Sign Out',
+          url:'/signout',
+          icon: LogOut,
           items:[]
         },
       ]
@@ -240,18 +265,20 @@ const SenateSidebarData = {
           icon: LayoutDashboard,
           items:[]
         }, 
+            {
+              name:'Results Review',
+              url:'/senate/results',
+              icon: FileCheck,
+              items:[]
+            },
         {
-          name:'Results Review',
-          url:'/senate/results',
-          icon: FileCheck,
+          name:'Sign Out',
+          url:'/signout',
+          icon: LogOut ,
           items:[]
-        },
-        {
-          name:'Help Center',
-          url:'/help',
-          icon: HelpCircle,
-          items:[]
-        },
+
+        }
+       
       ]
     },
   ],
@@ -260,6 +287,64 @@ const SenateSidebarData = {
     image: avatar,
     username: 'Senate User',
     email:'senate@delsu.edu.ng'
+  }
+}
+
+// Dean Sidebar Data
+const deanSidebarData = {
+  logoItems : {
+    main:"Delta State University",
+    sub: "Dean",
+    image: logo,
+  },
+
+  mainItems : [
+    {
+      title: 'General',
+      items:[
+        {
+          name:'Dashboard',
+          url:'/dean/dashboard',
+          icon: LayoutDashboard,
+          items:[]
+        },
+        {
+          name:'Level Results',
+          url:'/dean/level-results',
+          icon: FileCheck,
+          items:[]
+        },
+        {
+          name:'Lecturer Resubmission',
+          url:'/dean/lecturer-resubmission',
+          icon: ClipboardList,
+          items:[]
+        },
+        {
+          name:'Sign Out',
+          url:'/signout',
+          icon: LogOut,
+          items:[]
+        }
+      ]
+    },
+    {
+      title: 'Reports',
+      items:[
+        {
+          name:'Student Report',
+          url:'/dean/student-report',
+          icon: GraduationCap,
+          items:[]
+        }
+      ]
+    },
+  ],
+
+  bottomSide : {
+    image: avatar,
+    username: 'Dean User',
+    email:'dean@delsu.edu.ng'
   }
 }
 
@@ -276,6 +361,8 @@ export const getSidebarDataByRole = (role) => {
       return AdvisorSidebarData;
     case 'Senate':
       return SenateSidebarData;
+    case 'Dean':
+      return deanSidebarData;
     default:
       return studentSidebarData; // Default to student
   }

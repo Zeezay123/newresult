@@ -11,6 +11,12 @@ import { useSelector } from 'react-redux'
 
 const Dashboard = () => {
  const [isAdvisor, setIsAdvisor] = React.useState(false);
+ const [isHod, setIsHod] = React.useState(false);
+ const [isLecturer, setIsLecturer] = React.useState(false);
+ const [formData, setFormData] = React.useState({
+  username: '',
+  role: 'Admin',
+ })
   const dispatch = useDispatch();
    const navigate = useNavigate();
 
@@ -19,76 +25,141 @@ const Dashboard = () => {
 
 
   useEffect(() => {
-    fetchCheckAdvisor();
+
+    fetchRoles();
   },[])
 
-  const fetchCheckAdvisor = async () => {
+   const fetchRoles = async () => {
     try {
-      const response = await fetch('/api/lecturers/roles/checkAdvisor', { credentials: 'include' });
-      if (response.ok) {
-        const data = await response.json();
-          setIsAdvisor(true);
-        console.log("Check Advisor Response:", data);
-      } else {
-        console.error('Failed to check advisor status');
-      } 
-
+      const response = await fetch('/api/lecturers/roles/getroles', {credentials: 'include'});
+      const data = await response.json();
+     setIsHod(data.isHod);
+     setIsLecturer(data.isLecturer);
+     setIsAdvisor(data.isAdvisor);
+     console.log('Roles fetched:', data);
     } catch (error) {
-      console.error('Error checking advisor status:', error);
+      console.error('Error fetching roles:', error);
     }
   }
 
 
+  // const fetchCheckAdvisor = async () => {
+  //   try {
+  //     const response = await fetch('/api/lecturers/roles/checkAdvisor', { credentials: 'include' });
+  //     if (response.ok) {
+  //       const data = await response.json();
+  //         setIsAdvisor(true);
+  //       console.log("Check Advisor Response:", data);
+  //     } else {
+  //       console.error('Failed to check advisor status');
+  //     } 
+
+  //   } catch (error) {
+  //     console.error('Error checking advisor status:', error);
+  //   }
+  // }
+
+
 const goToAdvisorDash = async () => {
-
- try{
-
-  dispatch(signInStart());
-       const response = await fetch('/api/auth/login', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            credentials: 'include',
-           
-            body: JSON.stringify({
-                username:user,
-                role: 'advisor'
-            })
-        });
-
-
-        const alldata = await response.json();
-
-        const data = alldata.user;
+  
+    const url = `/api/auth/login` 
+    const role = 'Advisor';
+   try{
+  
+    dispatch(signInStart());
+         const response = await fetch(url, {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/json'
+              },
+              credentials: 'include',
+             
+              body: JSON.stringify({
+                  username:user,
+                  role: role
+              })
+          });
+  
+  
+          const alldata = await response.json();
+  
+          const data = alldata.user;
+         
+          console.log('Login response data:', alldata);
+         
+          if(alldata.success === false){
+              return dispatch(signInFailure(alldata.message || "can't Login"));
+          }
        
-        console.log('Login response data:', alldata);
-       
-        if(alldata.success === false){
-            return dispatch(signInFailure(alldata.message || "can't Login"));
+          if(response.ok){
+             // Pass data in the format Redux slice expects
+             dispatch(signInSuccess({
+                 user: data.user,
+                 role: data.role,
+                 department: data.department,
+                 token: alldata.token,
+                 id: data.id,
+                 email: data.email
+             }));
+        
+  
+             return navigate('/');
+          }
+  
+        }catch(error){
+          dispatch(signInFailure(error.message || "Couldn't switch dashboard"));
         }
-     
-        if(response.ok){
-           // Pass data in the format Redux slice expects
-           dispatch(signInSuccess({
-               user: data.user,
-               role: data.role,
-               department: data.department,
-               token: alldata.token,
-               id: data.id,
-               email: data.email
-           }));
-      
-
-           return navigate('/');
-        }
-
-      }catch(error){
-
       }
-    }
 
-
+      
+          const goToHodDash  = async (e)=>{
+            e.preventDefault()
+            console.log('Switching to HOD dashboard for user:', user);
+       setFormData({
+  username: user,
+  role: 'Admin'
+       })
+            try{
+              dispatch(signInStart());
+             const response = await fetch('/api/auth/staff-login', {
+                  method: 'POST',
+                  headers: {
+                      'Content-Type': 'application/json'
+                  },
+                  credentials: 'include',
+                 
+                  body: JSON.stringify({
+                      username:user,
+                  })
+              });
+      
+      const alldata = await response.json();
+              const data = alldata.user;
+             console.log('Login response data:', alldata);
+             
+              if(alldata.success === false){
+                  return dispatch(signInFailure(alldata.message || "can't Login"));
+              }
+           
+              if(response.ok){
+                 // Pass data in the format Redux slice expects
+                 dispatch(signInSuccess({
+                     user: data.user,
+                     role: data.role,
+                     department: data.department,
+                     token: alldata.token,
+                     id: data.id,
+                     email: data.email
+                 }));
+                 // Redirect to root - will automatically redirect based on role
+                 return navigate('/');
+              }
+      
+            }catch(error){
+              dispatch(signInFailure(error.message || "Couldn't switch dashboard"));
+            }
+          }
+      
 
 
   return (
@@ -103,7 +174,7 @@ const goToAdvisorDash = async () => {
     
  <div className='flex gap-4'> 
  {isAdvisor && <Button onClick={goToAdvisorDash}> Advisor Dashboard </Button> }
-   <Button > HOD Dashboard </Button> 
+ {isHod && <Button onClick={goToHodDash}> HOD Dashboard </Button> }
    
    </div>
     

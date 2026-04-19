@@ -1,3 +1,4 @@
+
 import {sql, poolPromise} from '../db.js'
 import { errorHandler } from '../utils/error.js'
 import jwt from 'jsonwebtoken';
@@ -45,7 +46,7 @@ export const Signin = async (req, res, next) => {
     // }
 
    
-    if(role === 'advisor' ){
+    if(role?.toLowerCase() === 'advisor' ){
         try{
 
             const pool = await poolPromise
@@ -105,66 +106,66 @@ export const Signin = async (req, res, next) => {
     }
 
     // Senate and SuperAdmin login - no department required
-    if(role.toLowerCase() === 'senate' || role.toLowerCase() === 'superadmin'){
-        try{
-            const pool = await poolPromise
+    // if(role.toLowerCase() === 'senate' || role.toLowerCase() === 'superadmin'){
+    //     try{
+    //         const pool = await poolPromise
             
-            if(!pool){
-                return next(errorHandler(500, "Database connection failed"))
-            }
+    //         if(!pool){
+    //             return next(errorHandler(500, "Database connection failed"))
+    //         }
             
-            const result = await pool.request()
-                .input('username', sql.VarChar, username)
-                .input('password', sql.VarChar, password)
-                .input('Role', sql.VarChar, role)
-                .query(`SELECT * FROM appusers 
-                    WHERE name = @username 
-                    AND password = @password 
-                    AND role = @Role
-                    AND (departmentID IS NULL OR departmentID = 0)`)
+    //         const result = await pool.request()
+    //             .input('username', sql.VarChar, username)
+    //             .input('password', sql.VarChar, password)
+    //             .input('Role', sql.VarChar, role)
+    //             .query(`SELECT * FROM appusers 
+    //                 WHERE name = @username 
+    //                 AND password = @password 
+    //                 AND role = @Role
+    //                 AND (departmentID IS NULL OR departmentID = 0)`)
             
-            if(result.recordset.length === 0){
-                return next(errorHandler(401, "Invalid Credentials"))
-            }
+    //         if(result.recordset.length === 0){
+    //             return next(errorHandler(401, "Invalid Credentials"))
+    //         }
 
-            const user = result.recordset[0]
+    //         const user = result.recordset[0]
             
-            // Generate JWT token
-            const token = jwt.sign(
-                {
-                    id: user.name,
-                    role: user.Role,
-                    departmentID: null  // No department for Senate/SuperAdmin
-                }, 
-                process.env.JWT_SECRET,
-                { expiresIn: '1h' }
-            )
+    //         // Generate JWT token
+    //         const token = jwt.sign(
+    //             {
+    //                 id: user.name,
+    //                 role: user.Role,
+    //                 departmentID: null  // No department for Senate/SuperAdmin
+    //             }, 
+    //             process.env.JWT_SECRET,
+    //             { expiresIn: '1h' }
+    //         )
 
-            console.log('role:', user.Role);
+    //         console.log('role:', user.Role);
             
-            return res.status(200)
-                .cookie('access_token', token, authCookieOptions)
-                .json({
-                    success: true,
-                    message: "Signin Successful",
-                    user: {
-                        id: user.username,
-                        name: user.name,
-                        email: user.email,
-                        role: user.Role,
-                        department: null  // No department
-                    },
-                    token: token
-                })
+    //         return res.status(200)
+    //             .cookie('access_token', token, authCookieOptions)
+    //             .json({
+    //                 success: true,
+    //                 message: "Signin Successful",
+    //                 user: {
+    //                     id: user.username,
+    //                     name: user.name,
+    //                     email: user.email,
+    //                     role: user.Role,
+    //                     department: null  // No department
+    //                 },
+    //                 token: token
+    //             })
                 
-        }catch(err){
-            console.error("Signin error details:", err.message)
-            console.error("Full error:", err)
-            return next(errorHandler(500, `Server error: ${err.message}`))
-        }
-    }
+    //     }catch(err){
+    //         console.error("Signin error details:", err.message)
+    //         console.error("Full error:", err)
+    //         return next(errorHandler(500, `Server error: ${err.message}`))
+    //     }
+    // }
 
-    if(role === 'student'){
+    if(role?.toLowerCase()  === 'student'){
         try {
             
            const pool = await poolPromise
@@ -201,7 +202,7 @@ export const Signin = async (req, res, next) => {
 
              console.log('role:', 'Student');
             // Send response matching Redux slice expectations
-            res.status(200)
+            return res.status(200)
                 .cookie('access_token', token, authCookieOptions)
                 .json({
                     success: true,
@@ -231,9 +232,27 @@ export const Signin = async (req, res, next) => {
 
     }
 
-
-
-
+  if(role?.toLowerCase() === 'admin'){
+    try{
+        const pool = await poolPromise
+        if(!pool){
+            return next(errorHandler(500, "Database connection failed"))
+        }
+        const result = await pool.request()
+        .input('StaffId', sql.VarChar, username)
+        .query(`SELECT StaffId, departmentid, CONCAT(LastName, ' ', OtherNames) AS name, EmailAddress AS email FROM tblStaffDirectory WHERE StaffId = @StaffId`)
+        
+        
+   
+    }catch(err){
+        console.error("Signin error details:", err.message)
+        console.error("Full error:", err)
+        return next(errorHandler(500, `Server error: ${err.message}`))
+    }
+  }
+//use for lecturers specificlogin
+ 
+ if(role?.toLowerCase() === 'lecturer'){
     try{
          const pool = await poolPromise
          
@@ -244,11 +263,8 @@ export const Signin = async (req, res, next) => {
          }
          
          const result = await pool.request()
-         .input('StaffCode', sql.VarChar, username)
-         .input('password',sql.VarChar, password)
-         .input('Role', sql.VarChar, role)
-         .input('departmentID', sql.Int, department)
-         .query('SELECT * FROM appusers WHERE StaffCode = @StaffCode AND password = @password AND role = @role AND departmentID = @departmentID') 
+         .input('StaffId', sql.VarChar, username)
+         .query(`SELECT StaffId, departmentid, CONCAT(LastName, ' ', OtherNames) AS name, EmailAddress AS email FROM tblStaffDirectory WHERE StaffId = @StaffId`) 
     
        
             
@@ -257,31 +273,32 @@ export const Signin = async (req, res, next) => {
             }
 
             const user = await result.recordset[0]
-        
+         
+            console.log('User found:', user);
             // Generate JWT token
             const token = jwt.sign(
                 {
-                    id: user.StaffCode,
-                    role: user.role,
-                    departmentID: user.departmentID  // Add departmentID to JWT
+                    id: user.StaffId,
+                    role:role,
+                    departmentID: user.departmentid  // Add departmentID to JWT
                 }, 
                 process.env.JWT_SECRET,
                 { expiresIn: '1h' }
             )
 
-             console.log('role:', user.Role);
+             console.log('role:', role);
             // Send response matching Redux slice expectations
-            res.status(200)
+          return  res.status(200)
                 .cookie('access_token', token, authCookieOptions)
                 .json({
                     success: true,
                     message: "Signin Successful",
                     user: {
-                        id: user.StaffCode,
+                        id: user.StaffId,
                         name: user.name,
                         email: user.email,
-                        role: user.Role,
-                        department: user.departmentID
+                        role: role,
+                        department: user.departmentid
                     },
                   
                    
@@ -293,8 +310,57 @@ export const Signin = async (req, res, next) => {
 
         }catch(err){
             console.error("Signin error details:", err.message)
-            console.error("Full error:", err)
+            console.error("Full error:", err.stack)
             return next(errorHandler(500, `Server error: ${err.message}`))
         }
+    }
 
+
+     try {
+        const pool = await poolPromise;
+        const result = await pool.request()
+            .input('Username', sql.VarChar, username)
+            .input('Password', sql.VarChar, password)
+            .query(`
+                SELECT u.StaffID, u.StaffID, u.Role, u.FacultyID
+                FROM dbo.resultUsers u
+                LEFT JOIN dbo.AppFaculty f ON u.FacultyID = f.FacultyID
+                WHERE u.StaffID = @Username AND u.Password = @Password
+            `);
+
+        if(result.recordset.length === 0){
+            return next(errorHandler(401, "Invalid Credentials"));
+        }
+
+        const user = result.recordset[0];
+
+    const token = jwt.sign({
+            id: user.StaffID,
+            role: user.Role,
+            departmentID: user.FacultyID
+         }, process.env.JWT_SECRET, { expiresIn: '1h' })
+
+    return    res.status(200).cookie('access_token', token, authCookieOptions).json({
+            success: true,
+            message: "Signin Successful",
+            user: {
+                id: user.StaffID, 
+                username: user.Username,
+                role: user.Role,
+                departmentID: user.DepartmentID,
+            }
+        });
+
+    }catch(error){
+        console.log('Error during sign-in:', error.stack);
+        return next(errorHandler(500, "Internal Server Error"));
+    }
+
+}
+
+export const signOut = (req, res) => {
+    res.clearCookie('access_token', authCookieOptions).json({
+        success: true,
+        message: "Signout Successful"
+    });
 }

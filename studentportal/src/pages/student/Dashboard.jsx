@@ -114,7 +114,7 @@ const credits = results?.reduce((sum, units)=> sum + (units.CreditUnits || 0), 0
           View your academic results and progress
           {sessionInfo.sessionName && ` - ${sessionInfo.semesterName} Semester, ${sessionInfo.sessionName}`}
           {sessionInfo.isCurrent && (
-            <Badge color="success" size="sm" className="ml-2">Current Semester</Badge>
+            <Badge color="success" size="sm" className="my-2 p-2">Current Semester</Badge>
           )}
         </p>
       </div>
@@ -279,9 +279,9 @@ const credits = results?.reduce((sum, units)=> sum + (units.CreditUnits || 0), 0
   {
     results?.map((result, index) => (
       <tr key={index} className='border-b border-slate-100 hover:bg-slate-50'>
-        <td className='p-4 font-medium text-xs text-slate-800'>{result.CourseCode}</td>
-        <td className='p-4 text-xs font-medium text-slate-600'>{result.CourseName}</td>
-        <td className='p-4 text-xs font-medium text-slate-600'>{result.CreditUnits}</td>
+        <td className='p-4 font-medium text-xs text-slate-800'>{result.course_code}</td>
+        <td className='p-4 text-xs font-medium text-slate-600'>{result.course_title}</td>
+        <td className='p-4 text-xs font-medium text-slate-600'>{result.credit_unit}</td>
         <td className='p-4 text-xs font-medium text-slate-600'>{result.TotalScore}</td>
         <td className='p-4 text-xs font-medium text-slate-600'>{result.Grade}</td>
         <td className='p-4 text-xs font-medium text-slate-600'>{result.GradePoint}</td>

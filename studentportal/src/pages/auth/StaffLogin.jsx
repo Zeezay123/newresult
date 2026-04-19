@@ -54,7 +54,7 @@ const alldata = await response.json();
         }
 
       }catch(error){
-
+        dispatch(signInFailure(error.message || "can't Login"));
       }
     }
 

@@ -12,41 +12,93 @@ const DashboardCard = () => {
   })
 
   React.useEffect(() => {
-    fetchDashboardStats();
+    fetchPendingResults();
+    fetchApprovedResults();
+    fetchStudents();
   }, [])
 
-  const fetchDashboardStats = async () => {
+  const fetchPendingResults = async () => {
     setLoading(true);
     try {
       // Fetch pending results
-      const resultsRes = await fetch(`/api/senate/results/stats`, 
-        { credentials: 'include' });
-      
-      // Fetch department stats
-      const departmentsRes = await fetch(`/api/senate/departments/stats`, 
+      const resultsRes = await fetch(`/api/senate/results/stat/pendingResults`, 
         { credentials: 'include' });
 
-      if (!resultsRes.ok || !departmentsRes.ok) {
-        console.error("Failed to fetch dashboard stats");
+
+      if(!resultsRes.ok){
+        console.log('Error fetching pending results:', resultsRes.statusText);
         return;
       }
 
-      const [resultsData, departmentsData] = await Promise.all([
-        resultsRes.json(),
-        departmentsRes.json()
-      ]);
+      const resultsData = await resultsRes.json();
 
-      setStats({
-        pendingResults: resultsData.pending || 0,
-        approvedResults: resultsData.approved || 0,
-        totalDepartments: departmentsData.total || 0,
-        totalStudents: departmentsData.students || 0
-      });
+      setStats(prevStats => ({
+        ...prevStats,
+        pendingResults: resultsData.pendingCount || 0
+      }));
+
+      console.log('Dashboard stats response:', resultsData); 
 
     } catch (error) {
       console.log("Error fetching dashboard stats:", error);
     } finally {
       setLoading(false);
+    }
+  }
+
+
+  const fetchApprovedResults = async () => {
+    setLoading(true);
+    try {
+      // Fetch approved results
+      const resultsRes = await fetch(`/api/senate/results/stat/approvedResults`, 
+        { credentials: 'include' });
+      
+      if(!resultsRes.ok){
+        console.log('Error fetching approved results:', resultsRes.statusText);
+        return;
+      }
+
+        const resultsData = await resultsRes.json();
+
+      setStats(prevStats => ({
+        ...prevStats,
+        approvedResults: resultsData.approvedCount || 0
+      }));
+
+      console.log('Dashboard stats response:', resultsData); 
+
+    } catch (error) {
+      console.log("Error fetching dashboard stats:", error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const fetchStudents = async () =>{
+    setLoading(true);
+    try {
+      // Fetch approved results
+      const studentsRes = await fetch(`/api/senate/results/stat/studentStats`, 
+        { credentials: 'include' });
+
+
+        if(!studentsRes.ok){
+          console.log('Error fetching student stats:', studentsRes.statusText);
+          return;
+        }
+
+      const studentsData = await studentsRes.json();
+
+      setStats(prevStats => ({
+        ...prevStats,
+        totalStudents: studentsData.studentCount || 0,
+      
+      }));
+
+      console.log('Dashboard stats response for students:', studentsData);
+  }catch (error) {
+      console.log("Error fetching dashboard stats:", error);
     }
   }
 
@@ -77,17 +129,6 @@ const DashboardCard = () => {
         <p className='text-sm text-slate-500'>Results approved this session</p>
       </div>
 
-      {/* Total Departments */}
-      <div className='bg-white shadow-sm border border-slate-200/20 p-5 rounded-lg'>
-        <div className='flex items-center justify-between'>
-          <h2 className='text-slate-600 font-medium mb-2'>Departments</h2>
-          <span className='bg-blue-100 text-blue-600 rounded-full p-2'> 
-            <Users size={20}/>  
-          </span> 
-        </div> 
-        <h1 className='font-bold text-3xl my-4'> {stats.totalDepartments} </h1>
-        <p className='text-sm text-slate-500'>Active departments</p>
-      </div>
 
       {/* Total Students */}
       <div className='bg-white shadow-sm border border-slate-200/20 p-5 rounded-lg'>

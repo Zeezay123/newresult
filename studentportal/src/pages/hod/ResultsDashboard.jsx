@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Select, TextInput, Spinner, Badge, Modal, ModalHeader, ModalBody, ModalFooter } from 'flowbite-react'
-import { FileCheck, FileX, ClockAlert, CheckCircle, Search, Filter, Eye, UserCheck, XCircle } from 'lucide-react'
+import { FileCheck, FileX, ClockAlert, CheckCircle, Search, Filter, Eye, UserCheck, XCircle, Users, AlertCircle } from 'lucide-react'
 import Button from '../../components/ui/Button'
 import { useSelector } from 'react-redux'
 
@@ -22,14 +22,64 @@ const ResultsDashboard = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [selectedResult, setSelectedResult] = useState(null);
+  const [sessions, setSessions] = useState([]);
+  const [semesters, setSemesters] = useState([]);
+  const [levels, setLevels] = useState([]);
 
   const hodId = useSelector((state) => state.user.department);
 
   // Fetch results data
   useEffect(() => {
     fetchExamResults();
+    fetchSessions();
+    fetchActiveSemester();
+    fetchLevels();
   }, [selectedSemester, selectedLevel, searchTerm]);
 
+
+
+ const fetchSessions = async () => {
+    try {
+   const response = await fetch('/api/sessions/active-session', { credentials: 'include' })
+      if (response.ok) {
+        const data = await response.json()
+        setSessions(data.session ? [data.session] : [])
+        setSelectedSession(data.session ? data.session.SessionID : '')
+      }
+    } catch (error) {
+      console.error('Error fetching sessions:', error)
+    }
+  }
+ 
+  const fetchActiveSemester = async () => {
+    try{
+
+      const response = await fetch('/api/sessions/getActiveSemester', { credentials: 'include' })
+      if (!response.ok) {
+        throw new Error('Failed to fetch active semester')
+      }
+      const data = await response.json()
+      setSemesters(data.semester ? [data.semester] : [])
+      setSelectedSemester(data.semester ? data.semester.SemesterID : '')
+    } catch (error) {
+      console.error('Error fetching active semester:', error)
+    }
+  }
+
+  const fetchLevels = async () => {
+    try {
+      const response = await fetch('/api/levels/getLevels', { credentials: 'include' });
+      if (!response.ok) {
+        throw new Error('Failed to fetch levels');
+      }
+      const data = await response.json();
+      setLevels(data.levels || []);
+    } catch (error) {
+      console.error('Error fetching levels:', error);
+    }
+  }
+
+  
   // Calculate stats when results change
   useEffect(() => {
     if (results.length > 0) {
@@ -68,7 +118,7 @@ const ResultsDashboard = () => {
       if (selectedLevel) params.append('levelID', selectedLevel);
       if (searchTerm) params.append('search', searchTerm);
 
-      const res = await fetch(`/api/hod/results/allExamResults/${hodId}?${params.toString()}`, {
+      const res = await fetch(`/api/hod/results/allExamResults/?${params.toString()}`, {
         credentials: 'include'
       });
 
@@ -148,6 +198,13 @@ const ResultsDashboard = () => {
     }
   };
   
+
+  const reportStats = useMemo(() => {
+    const fully = filteredResults.filter(r => r.TotalStudents > 0 && r.StudentCount >= r.TotalStudents).length;
+    const partial = filteredResults.filter(r => r.TotalStudents > 0 && r.StudentCount > 0 && r.StudentCount < r.TotalStudents).length;
+    const missing = filteredResults.filter(r => !r.TotalStudents || r.TotalStudents === 0).length;
+    return { fully, partial, missing, total: filteredResults.length };
+  }, [filteredResults]);
 
   const getStatusBadge = (status) => {
     // Map database status to display status
@@ -246,8 +303,12 @@ const ResultsDashboard = () => {
               <label className='text-sm font-medium'>Session</label>
               <Select value={selectedSession} onChange={(e) => setSelectedSession(e.target.value)}>
                 <option value="">All Sessions</option>
-                <option value="1">2024/2025</option>
-                <option value="2">2023/2024</option>
+                {sessions.map((session) => (
+                  <option key={session.SessionID} value={session.SessionID}>
+                    {session.SessionName}
+                  </option>
+                ))}
+
               </Select>
             </div>
 
@@ -255,8 +316,12 @@ const ResultsDashboard = () => {
               <label className='text-sm font-medium'>Semester</label>
               <Select value={selectedSemester} onChange={(e) => setSelectedSemester(e.target.value)}>
                 <option value="">All Semesters</option>
-                <option value="1">First Semester</option>
-                <option value="2">Second Semester</option>
+                {semesters.map((semester) => (
+                  <option key={semester.SemesterID} value={semester.SemesterID}>
+                    {semester.SemesterName}
+                  </option>
+                ))}
+
               </Select>
             </div>
 
@@ -264,10 +329,12 @@ const ResultsDashboard = () => {
               <label className='text-sm font-medium'>Level</label>
               <Select value={selectedLevel} onChange={(e) => setSelectedLevel(e.target.value)}>
                 <option value="">All Levels</option>
-                <option value="1">100 Level</option>
-                <option value="2">200 Level</option>
-                <option value="3">300 Level</option>
-                <option value="4">400 Level</option>
+                {levels.map((level) => (
+                  <option key={level.LevelID} value={level.LevelID}>
+                    {level.LevelName}
+                  </option>
+                ))}
+              
               </Select>
             </div>
 
@@ -293,6 +360,43 @@ const ResultsDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Mini Report: Submission Coverage */}
+      {!loading && filteredResults.length > 0 && (
+        <div className='bg-white p-4 rounded-lg shadow-sm'>
+          <div className='flex items-center gap-2 mb-3'>
+            <Users size={18} className='text-gray-600' />
+            <h2 className='font-semibold text-base'>Submission Coverage Report</h2>
+            <span className='text-xs text-gray-400 ml-1'>— registered students vs submitted results per course</span>
+          </div>
+          <div className='grid grid-cols-1 md:grid-cols-3 gap-3'>
+            <div className='flex items-center gap-3 p-3 rounded-lg bg-green-50 border border-green-200'>
+              <CheckCircle size={22} className='text-green-600 shrink-0' />
+              <div>
+                <p className='text-xl font-bold text-green-700'>{reportStats.fully}</p>
+                <p className='text-xs text-green-700 font-medium'>Fully Submitted</p>
+                <p className='text-xs text-gray-500'>All registered students covered</p>
+              </div>
+            </div>
+            <div className='flex items-center gap-3 p-3 rounded-lg bg-yellow-50 border border-yellow-200'>
+              <ClockAlert size={22} className='text-yellow-600 shrink-0' />
+              <div>
+                <p className='text-xl font-bold text-yellow-700'>{reportStats.partial}</p>
+                <p className='text-xs text-yellow-700 font-medium'>Partially Submitted</p>
+                <p className='text-xs text-gray-500'>Some students not yet included</p>
+              </div>
+            </div>
+            <div className='flex items-center gap-3 p-3 rounded-lg bg-red-50 border border-red-200'>
+              <AlertCircle size={22} className='text-red-600 shrink-0' />
+              <div>
+                <p className='text-xl font-bold text-red-700'>{reportStats.missing}</p>
+                <p className='text-xs text-red-700 font-medium'>No Registrations Found</p>
+                <p className='text-xs text-gray-500'>Registration data unavailable</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Results Table */}
       <div className='bg-white rounded-lg shadow-sm overflow-hidden'>
@@ -322,7 +426,8 @@ const ResultsDashboard = () => {
                   <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>Course</th>
                   <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>Level</th>
                   <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>Lecturer</th>
-                  <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>Students</th>
+                  <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>Submitted / Registered</th>
+                  <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>Result Type</th>
                   <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>Status</th>
                   <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>Actions</th>
                 </tr>
@@ -332,13 +437,34 @@ const ResultsDashboard = () => {
                   <tr key={index} className='hover:bg-gray-50 transition-colors'>
                     <td className='px-4 py-4'>
                       <div className='flex flex-col'>
-                        <span className='font-medium text-gray-900'>{result.CourseCode}</span>
-                        <span className='text-sm text-gray-500'>{result.CourseName}</span>
+                        <span className='font-medium text-gray-900'>{result.course_code}</span>
+                        <span className='text-sm text-gray-500'>{result.course_title}</span>
                       </div>
                     </td>
                     <td className='px-4 py-4 text-sm text-gray-900'>{result.LevelName}</td>
                     <td className='px-4 py-4 text-sm text-gray-900'>{result.LecturerName}</td>
-                    <td className='px-4 py-4 text-sm text-gray-900'>{result.StudentCount}</td>
+                    <td className='px-4 py-4'>
+                      <div className='flex flex-col gap-1'>
+                        <span className='text-sm font-medium text-gray-900'>
+                          {result.StudentCount} / {result.TotalStudents || 0}
+                        </span>
+                        {result.TotalStudents > 0 && (
+                          <div className='w-24 h-1.5 bg-gray-200 rounded-full overflow-hidden'>
+                            <div
+                              className={`h-full rounded-full ${
+                                result.StudentCount >= result.TotalStudents
+                                  ? 'bg-green-500'
+                                  : result.StudentCount > 0
+                                  ? 'bg-yellow-400'
+                                  : 'bg-red-400'
+                              }`}
+                              style={{ width: `${Math.min(100, Math.round((result.StudentCount / result.TotalStudents) * 100))}%` }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className='px-4 py-4 text-sm text-gray-900'>{result.ResultType}</td>
                     <td className='px-4 py-4'>{getStatusBadge(result.ResultStatus)}</td>
                     <td className='px-4 py-4'>
                       <div className='flex items-center gap-2'>
@@ -349,7 +475,7 @@ const ResultsDashboard = () => {
                         >
                           <Eye size={18} />
                         </button>
-                        {result.ResultStatus === 'Submitted' && (
+                        {/* {result.ResultStatus === 'Submitted' && (
                           <>
                             <button
                               onClick={() => handleApprove(result)}
@@ -366,7 +492,7 @@ const ResultsDashboard = () => {
                               <XCircle size={18} />
                             </button>
                           </>
-                        )}
+                        )} */}
                       </div>
                     </td>
                   </tr>
@@ -386,31 +512,31 @@ const ResultsDashboard = () => {
               <div className='grid grid-cols-2 gap-4'>
                 <div>
                   <label className='text-sm font-medium text-gray-600'>Course</label>
-                  <p className='text-base font-semibold'>{selectedResult.courseCode} - {selectedResult.courseName}</p>
+                  <p className='text-base font-semibold'>{selectedResult.course_code} - {selectedResult.course_title}</p>
                 </div>
                 <div>
                   <label className='text-sm font-medium text-gray-600'>Level</label>
-                  <p className='text-base font-semibold'>{selectedResult.level}</p>
+                  <p className='text-base font-semibold'>{selectedResult.LevelName}</p>
                 </div>
                 <div>
                   <label className='text-sm font-medium text-gray-600'>Lecturer</label>
-                  <p className='text-base font-semibold'>{selectedResult.lecturerName}</p>
+                  <p className='text-base font-semibold'>{selectedResult.LecturerName}</p>
                 </div>
                 <div>
-                  <label className='text-sm font-medium text-gray-600'>Total Students</label>
-                  <p className='text-base font-semibold'>{selectedResult.studentsCount}</p>
+                  <label className='text-sm font-medium text-gray-600'>Submitted / Registered</label>
+                  <p className='text-base font-semibold'>{selectedResult.StudentCount} / {selectedResult.TotalStudents || 0}</p>
                 </div>
                 <div>
                   <label className='text-sm font-medium text-gray-600'>Submitted Date</label>
-                  <p className='text-base font-semibold'>{new Date(selectedResult.submittedDate).toLocaleDateString()}</p>
+                  <p className='text-base font-semibold'>{new Date(selectedResult.SubmittedDate).toLocaleDateString()}</p>
                 </div>
                 <div>
                   <label className='text-sm font-medium text-gray-600'>Status</label>
-                  <div className='mt-1'>{getStatusBadge(selectedResult.status)}</div>
+                  <div className='mt-1'>{getStatusBadge(selectedResult.ResultStatus)}</div>
                 </div>
               </div>
 
-              <div className='border-t pt-4'>
+              {/* <div className='border-t pt-4'>
                 <h3 className='font-semibold mb-3'>Grade Distribution</h3>
                 <div className='grid grid-cols-6 gap-2 text-center'>
                   <div className='bg-green-50 p-3 rounded'>
@@ -438,7 +564,7 @@ const ResultsDashboard = () => {
                     <p className='text-xs text-gray-600'>F</p>
                   </div>
                 </div>
-              </div>
+              </div> */}
             </div>
           )}
         </ModalBody>

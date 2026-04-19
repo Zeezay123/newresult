@@ -127,11 +127,11 @@ export const getResults = async (req, res, next) => {
             SELECT 
                 r.MatricNo,
                 r.CourseID,
-                c.CourseCode,
-                c.CourseName,
+                c.course_code,
+                c.course_title,
                 r.Grade,
                 r.TotalScore,
-                c.CreditUnits,
+                c.credit_unit,
                 r.GradePoint,
                 r.SessionID,
                 r.SemesterID,
@@ -146,7 +146,7 @@ export const getResults = async (req, res, next) => {
                 r.HOD_Approval,
                 r.Bsc_Approval
             FROM dbo.results r
-            INNER JOIN dbo.course c ON r.CourseID = c.CourseID
+            INNER JOIN dbo.courses c ON r.CourseID = c.course_id
             INNER JOIN dbo.sessions ses ON r.SessionID = ses.SessionID
             INNER JOIN dbo.semesters sem ON r.SemesterID = sem.SemesterID
             LEFT JOIN dbo.student_gpa gpa ON r.MatricNo = gpa.MatricNo 
@@ -158,7 +158,7 @@ export const getResults = async (req, res, next) => {
                 AND r.ResultStatus = 'Approved'
                 AND r.ResultType = 'Exam'
                 ${approvalCondition}
-            ORDER BY c.CourseCode
+            ORDER BY c.course_code
         `;
 
         const result = await pool.request()
@@ -217,11 +217,11 @@ export const getFailedCoreCourses = async (req, res, next) => {
         // Get all failed core courses for the student (courses they took but failed)
         const query = `
             SELECT DISTINCT
-                c.CourseID,
-                c.CourseCode,
-                c.CourseName,
-                c.CreditUnits,
-                c.CourseType,
+                c.course_id,
+                c.course_code,
+                c.course_title,
+                c.credit_unit,
+                c.course_type,
                 r.Grade,
                 r.GradePoint,
                 r.TotalScore,
@@ -232,21 +232,21 @@ export const getFailedCoreCourses = async (req, res, next) => {
                 l.LevelName,
                 'Failed' AS CourseStatus
             FROM dbo.results r
-            INNER JOIN dbo.course c ON r.CourseID = c.CourseID
+            INNER JOIN dbo.courses c ON r.CourseID = c.course_id
             INNER JOIN dbo.sessions ses ON r.SessionID = ses.SessionID
             INNER JOIN dbo.semesters sem ON r.SemesterID = sem.SemesterID
-            LEFT JOIN dbo.levels l ON c.LevelID = l.LevelID
+            LEFT JOIN dbo.levels l ON c.level_id = l.LevelID
             WHERE r.MatricNo = @MatricNo
                 AND r.ResultStatus = 'Approved'
                 AND r.ResultType = 'Exam'
                 AND (r.Grade = 'F' OR r.GradePoint = 0)
-                AND (c.CourseType = 'Core' OR c.CourseType = 'Compulsory')
+                AND (c.course_type = 'C' OR c.course_type = 'Compulsory')
                 AND r.Advisor = 'Approved'
                 AND r.HOD_Approval = 'Approved'
                 AND r.Bsc_Approval = 'Approved'
            
         `;
- //ORDER BY ses.SessionID DESC, sem.SemesterID DESC, c.CourseCode
+ //ORDER BY ses.SessionID DESC, sem.SemesterID DESC, c.course_code
         const result = await pool.request()
             .input('MatricNo', sql.VarChar, MatricNo)
             .query(query);
@@ -255,7 +255,7 @@ export const getFailedCoreCourses = async (req, res, next) => {
             success: true,
             failedCoreCourses: result.recordset,
             count: result.recordset.length,
-            totalUnits: result.recordset.reduce((sum, course) => sum + (course.CreditUnits || 0), 0)
+            totalUnits: result.recordset.reduce((sum, course) => sum + (course.credit_unit || 0), 0)
         });
 
     } catch (error) {
@@ -283,9 +283,9 @@ export const getMissedCoreCourses = async (req, res, next) => {
         const studentInfo = await pool.request()
             .input('MatricNo', sql.VarChar, MatricNo)
             .query(`
-                SELECT StudentID, LevelID, DepartmentID, FacultyID, ProgrammeID
+                SELECT StudentID, MatNo, LevelID, department, DisciplineID,faculty, ProgrammeID
                 FROM dbo.student
-                WHERE MatricNo = @MatricNo
+                WHERE MatNo = @MatricNo
             `);
 
         if (studentInfo.recordset.length === 0) {
@@ -294,57 +294,72 @@ export const getMissedCoreCourses = async (req, res, next) => {
 
         const student = studentInfo.recordset[0];
 
-        // Find core courses that the student should have taken but didn't register for
-        // These are courses for levels <= student's current level that they never registered
+        // Get active semester to avoid listing future-semester courses as missed.
+        const activeSemesterResult = await pool.request()
+            .query(`SELECT SemesterID FROM dbo.semesters WHERE isActive = 'true'`);
+
+        if (activeSemesterResult.recordset.length === 0) {
+            return next(errorHandler(404, "No active semester found"));
+        }
+
+        const currentSemesterID = activeSemesterResult.recordset[0].SemesterID;
+
+        // Find required core/compulsory courses due up to the current semester that are not registered.
         const query = `
-            SELECT DISTINCT
-                c.CourseID,
-                c.CourseCode,
-                c.CourseName,
-                c.CreditUnits,
-                c.CourseType,
-                c.SemesterID,
+            SELECT 
+                c.course_id,
+                c.course_code,
+                c.course_title,
+                c.credit_unit,
+                c.course_type,
+                c.semester AS SemesterID,
                 l.LevelName,
                 sem.SemesterName,
                 'Missed' AS CourseStatus
-            FROM dbo.course c
-            LEFT JOIN dbo.levels l ON c.LevelID = l.LevelID
-            LEFT JOIN dbo.semesters sem ON c.SemesterID = sem.SemesterID
-            WHERE c.CourseType IN ('Core', 'Compulsory')
-                AND c.LevelID <= @LevelID
-                AND (
-                    -- Department courses
-                    (c.CourseCategory = 'department' AND c.DepartmentID = @DepartmentID)
-                    OR
-                    -- Faculty courses
-                    (c.CourseCategory = 'faculty' AND c.FacultyID = @FacultyID)
-                    OR
-                    -- General courses
-                    (c.CourseCategory = 'general')
-                )
-                AND c.CourseID NOT IN (
-                    -- Exclude courses the student has already registered for
-                    SELECT CourseID 
-                    FROM dbo.course_registration 
-                    WHERE StudentID = @StudentID
-                )
-            ORDER BY c.LevelID, c.SemesterID, c.CourseCode
-        `;
+            FROM dbo.courses c
+            LEFT JOIN dbo.levels l ON c.level_id = l.LevelID
+            LEFT JOIN dbo.semesters sem ON c.semester = sem.SemesterID
+
+            WHERE c.course_type = 'C'
+            AND c.programme_id = @ProgrammeID
+            AND c.discipline = @DisciplineID
+            AND c.faculty = @FacultyID
+            AND c.level_id = @LevelID
+                AND c.semester <= @CurrentSemesterID
+         
+            
+            AND NOT EXISTS (
+            SELECT * FROM dbo.results r 
+            where c.course_id = r.CourseID
+            AND
+            r.MatricNo = @MatricNo
+            ) 
+
+           
+            ORDER BY c.course_code
+        `
+
+
+
+
+
 
         const result = await pool.request()
-            .input('StudentID', sql.Int, student.StudentID)
+            
             .input('MatricNo', sql.VarChar, MatricNo)
             .input('LevelID', sql.Int, student.LevelID)
-            .input('DepartmentID', sql.Int, student.DepartmentID)
-            .input('FacultyID', sql.Int, student.FacultyID)
+            .input('CurrentSemesterID', sql.Int, currentSemesterID)
             .input('ProgrammeID', sql.Int, student.ProgrammeID)
+            .input('DepartmentID', sql.Int, student.department)
+            .input('FacultyID', sql.Int, student.faculty)
+            .input('DisciplineID', sql.Int, student.DisciplineID)
             .query(query);
 
         return res.status(200).json({
             success: true,
             missedCoreCourses: result.recordset,
             count: result.recordset.length,
-            totalUnits: result.recordset.reduce((sum, course) => sum + (course.CreditUnits || 0), 0)
+            totalUnits: result.recordset.reduce((sum, course) => sum + (course.credit_unit || 0), 0)
         });
 
     } catch (error) {
@@ -352,6 +367,27 @@ export const getMissedCoreCourses = async (req, res, next) => {
         return next(errorHandler(500, "An error occurred while fetching missed core courses"));
     }
 };
+
+
+//  AND NOT EXISTS (
+//                     SELECT 1
+//                     FROM dbo.course_registrations cr
+//                     CROSS APPLY STRING_SPLIT(CAST(ISNULL(cr.courses, '') AS NVARCHAR(MAX)), ',') AS registeredCourse
+//                     WHERE cr.mat_no = @MatricNo
+//                       AND TRY_CAST(LTRIM(RTRIM(registeredCourse.value)) AS INT) = c.course_id
+//                 ) 
+       
+//                 AND EXISTS (
+//                     SELECT 1
+//                     FROM dbo.courses c2
+//                     CROSS APPLY STRING_SPLIT(CAST(ISNULL(c2.faculty, '') AS NVARCHAR(MAX)), ',') AS courseFaculty
+//                     CROSS APPLY STRING_SPLIT(CAST(ISNULL(c2.discipline, '') AS NVARCHAR(MAX)), ',') AS courseDiscipline
+//                     where c2.course_id = c.course_id 
+//                       AND TRY_CAST(LTRIM(RTRIM(courseFaculty.value)) AS INT) = @FacultyID
+//                       AND TRY_CAST(LTRIM(RTRIM(courseDiscipline.value)) AS INT) = @DisciplineID
+//                       AND c2.semester = @currentSemesterID
+//                 )
+
 
 // Get all outstanding courses (both failed and missed)
 export const getOutstandingCourses = async (req, res, next) => {
@@ -372,9 +408,9 @@ export const getOutstandingCourses = async (req, res, next) => {
         const studentInfo = await pool.request()
             .input('MatricNo', sql.VarChar, MatricNo)
             .query(`
-                SELECT StudentID, LevelID, DepartmentID, FacultyID, ProgrammeID
+                SELECT StudentID, MatNo, LevelID, department, faculty, ProgrammeID
                 FROM dbo.student
-                WHERE MatricNo = @MatricNo
+                WHERE MatNo = @MatricNo
             `);
 
         if (studentInfo.recordset.length === 0) {
@@ -383,15 +419,24 @@ export const getOutstandingCourses = async (req, res, next) => {
 
         const student = studentInfo.recordset[0];
 
-        // Get both failed and missed courses in a single query
+        const activeSemesterResult = await pool.request()
+            .query(`SELECT SemesterID FROM dbo.semesters WHERE isActive = 'true'`);
+
+        if (activeSemesterResult.recordset.length === 0) {
+            return next(errorHandler(404, "No active semester found"));
+        }
+
+        const currentSemesterID = activeSemesterResult.recordset[0].SemesterID;
+
+        // Failed = registered and attempted but failed.
+        // Missed = due required core/compulsory courses not present in comma-separated registrations.
         const query = `
-            -- Failed courses (courses taken but failed)
             SELECT DISTINCT
-                c.CourseID,
-                c.CourseCode,
-                c.CourseName,
-                c.CreditUnits,
-                c.CourseType,
+                c.course_id,
+                c.course_code,
+                c.course_title,
+                c.credit_unit,
+                c.course_type,
                 r.Grade,
                 r.GradePoint,
                 r.TotalScore,
@@ -401,63 +446,51 @@ export const getOutstandingCourses = async (req, res, next) => {
                 sem.SemesterName,
                 l.LevelName,
                 'Failed' AS CourseStatus
+                
             FROM dbo.results r
-            INNER JOIN dbo.course c ON r.CourseID = c.CourseID
+            INNER JOIN dbo.courses c ON r.CourseID = c.course_id
             INNER JOIN dbo.sessions ses ON r.SessionID = ses.SessionID
             INNER JOIN dbo.semesters sem ON r.SemesterID = sem.SemesterID
-            LEFT JOIN dbo.levels l ON c.LevelID = l.LevelID
+            LEFT JOIN dbo.levels l ON c.level_id = l.LevelID
             WHERE r.MatricNo = @MatricNo
                 AND r.ResultStatus = 'Approved'
                 AND r.ResultType = 'Exam'
                 AND (r.Grade = 'F' OR r.GradePoint = 0)
-                AND (c.CourseType = 'Core' OR c.CourseType = 'Compulsory')
+                AND c.course_type IN ('C', 'Compulsory')
                 AND r.Advisor = 'Approved'
                 AND r.HOD_Approval = 'Approved'
                 AND r.Bsc_Approval = 'Approved'
-            
+
             UNION ALL
-            
-            -- Missed courses (courses not registered for)
+
             SELECT DISTINCT
-                c.CourseID,
-                c.CourseCode,
-                c.CourseName,
-                c.CreditUnits,
-                c.CourseType,
+                c.course_id,
+                c.course_code,
+                c.course_title,
+                c.credit_unit,
+                c.course_type,
                 NULL AS Grade,
                 NULL AS GradePoint,
                 NULL AS TotalScore,
                 NULL AS SessionID,
-                c.SemesterID,
+                c.semester AS SemesterID,
                 NULL AS SessionName,
                 sem.SemesterName,
                 l.LevelName,
                 'Missed' AS CourseStatus
-            FROM dbo.course c
-            LEFT JOIN dbo.levels l ON c.LevelID = l.LevelID
-            LEFT JOIN dbo.semesters sem ON c.SemesterID = sem.SemesterID
-            WHERE c.CourseType IN ('Core', 'Compulsory')
-                AND c.LevelID <= @LevelID
-                AND (
-                    (c.CourseCategory = 'department' AND c.DepartmentID = @DepartmentID)
-                    OR (c.CourseCategory = 'faculty' AND c.FacultyID = @FacultyID)
-                    OR (c.CourseCategory = 'general')
-                )
-                AND c.CourseID NOT IN (
-                    SELECT CourseID 
-                    FROM dbo.course_registration 
-                    WHERE StudentID = @StudentID
-                )
-            ORDER BY CourseStatus, LevelName, SemesterName, CourseCode
+            FROM dbo.courses c
+            LEFT JOIN dbo.levels l ON c.level_id = l.LevelID
+            LEFT JOIN dbo.semesters sem ON  c.semester = sem.SemesterID
+            WHERE c.course_type ='E'
+                
+               
+            ORDER BY CourseStatus, LevelName, SemesterName, course_code
         `;
 
         const result = await pool.request()
             .input('MatricNo', sql.VarChar, MatricNo)
-            .input('StudentID', sql.Int, student.StudentID)
             .input('LevelID', sql.Int, student.LevelID)
-            .input('DepartmentID', sql.Int, student.DepartmentID)
-            .input('FacultyID', sql.Int, student.FacultyID)
-            .input('ProgrammeID', sql.Int, student.ProgrammeID)
+            .input('CurrentSemesterID', sql.Int, currentSemesterID)
             .query(query);
 
         const failedCourses = result.recordset.filter(c => c.CourseStatus === 'Failed');
@@ -472,9 +505,9 @@ export const getOutstandingCourses = async (req, res, next) => {
                 total: result.recordset.length,
                 failed: failedCourses.length,
                 missed: missedCourses.length,
-                totalUnits: result.recordset.reduce((sum, course) => sum + (course.CreditUnits || 0), 0),
-                failedUnits: failedCourses.reduce((sum, course) => sum + (course.CreditUnits || 0), 0),
-                missedUnits: missedCourses.reduce((sum, course) => sum + (course.CreditUnits || 0), 0)
+                totalUnits: result.recordset.reduce((sum, course) => sum + (course.credit_unit || 0), 0),
+                failedUnits: failedCourses.reduce((sum, course) => sum + (course.credit_unit || 0), 0),
+                missedUnits: missedCourses.reduce((sum, course) => sum + (course.credit_unit || 0), 0)
             }
         });
 
@@ -486,6 +519,8 @@ export const getOutstandingCourses = async (req, res, next) => {
 
 export const getPassedCourses = async (req, res, next) => {
     const { MatricNo } = req.query;
+
+    console.log('Fetching passed courses for MatricNo:', MatricNo);
 
     if (!MatricNo) {
         return res.status(400).json({ message: "MatricNo is required" });
@@ -501,11 +536,11 @@ export const getPassedCourses = async (req, res, next) => {
         // Get all passed courses (both core and elective) for the student
         const query = `
             SELECT DISTINCT
-                c.CourseID,
-                c.CourseCode,
-                c.CourseName,
-                c.CreditUnits,
-                c.CourseType,
+                c.course_id,
+                c.course_code,
+                c.course_title,
+                c.credit_unit,
+                c.course_type,
                 r.Grade,
                 r.GradePoint,
                 r.TotalScore,
@@ -515,10 +550,10 @@ export const getPassedCourses = async (req, res, next) => {
                 sem.SemesterName,
                 l.LevelName
             FROM dbo.results r
-            INNER JOIN dbo.course c ON r.CourseID = c.CourseID
+            INNER JOIN dbo.courses c ON r.CourseID = c.course_id
             INNER JOIN dbo.sessions ses ON r.SessionID = ses.SessionID
             INNER JOIN dbo.semesters sem ON r.SemesterID = sem.SemesterID
-            LEFT JOIN dbo.levels l ON c.LevelID = l.LevelID
+            LEFT JOIN dbo.levels l ON c.level_id = l.LevelID
             WHERE r.MatricNo = @MatricNo
                 AND r.ResultStatus = 'Approved'
                 AND r.ResultType = 'Exam'
@@ -538,27 +573,27 @@ export const getPassedCourses = async (req, res, next) => {
             .query(query);
 
         // Group courses by type for summary
-        const coreCourses = result.recordset.filter(c => c.CourseType === 'Core' || c.CourseType === 'core');
-        const electiveCourses = result.recordset.filter(c => c.CourseType === 'Elective' || c.CourseType === 'elective');
-        const otherCourses = result.recordset.filter(c => c.CourseType !== 'Core' && c.CourseType !== 'core' && c.CourseType !== 'Elective' && c.CourseType !== 'elective');
+        const coreCourses = result.recordset.filter(c => c.course_type === 'C' || c.course_type === 'core');
+        const electiveCourses = result.recordset.filter(c => c.course_type === 'E' || c.course_type === 'elective');
+        const otherCourses = result.recordset.filter(c => c.course_type !== 'C' && c.course_type !== 'core' && c.course_type !== 'E' && c.course_type !== 'elective');
 
         return res.status(200).json({
             success: true,
             passedCourses: result.recordset,
             count: result.recordset.length,
-            totalUnits: result.recordset.reduce((sum, course) => sum + (course.CreditUnits || 0), 0),
+            totalUnits: result.recordset.reduce((sum, course) => sum + (course.credit_unit || 0), 0),
             summary: {
                 core: {
                     count: coreCourses.length,
-                    units: coreCourses.reduce((sum, course) => sum + (course.CreditUnits || 0), 0)
+                    units: coreCourses.reduce((sum, course) => sum + (course.credit_unit || 0), 0)
                 },
                 elective: {
                     count: electiveCourses.length,
-                    units: electiveCourses.reduce((sum, course) => sum + (course.CreditUnits || 0), 0)
+                    units: electiveCourses.reduce((sum, course) => sum + (course.credit_unit || 0), 0)
                 },
                 other: {
                     count: otherCourses.length,
-                    units: otherCourses.reduce((sum, course) => sum + (course.CreditUnits || 0), 0)
+                    units: otherCourses.reduce((sum, course) => sum + (course.credit_unit || 0), 0)
                 }
             }
         });
@@ -572,3 +607,17 @@ export const getPassedCourses = async (req, res, next) => {
 export const getgpa = async (req, res, next) => {
 
 }
+
+
+// AND (
+//                     c.level_id < @LevelID
+//                     OR (c.level_id = @LevelID AND  c.semester <= @CurrentSemesterID)
+//                 )
+
+//  AND NOT EXISTS (
+//                     SELECT 1
+//                     FROM dbo.course_registrations cr
+//                     CROSS APPLY STRING_SPLIT(CAST(ISNULL(cr.courses, '') AS NVARCHAR(MAX)), ',') AS registeredCourse
+//                     WHERE cr.mat_no = @MatricNo
+//                       AND TRY_CAST(LTRIM(RTRIM(registeredCourse.value)) AS INT) = c.course_id
+//                 )

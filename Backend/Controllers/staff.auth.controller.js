@@ -34,13 +34,19 @@ export const staffSignin = async (req, res, next) => {
         WHEN EXISTS (
             SELECT 1 
             FROM STRING_SPLIT(roles, ',') 
+            WHERE TRIM(value) = '4'
+        ) THEN '4'
+        WHEN EXISTS (
+            SELECT 1 
+            FROM STRING_SPLIT(roles, ',') 
             WHERE TRIM(value) = '3'
         ) THEN '3'
         ELSE '1'  -- default lecturer role
     END AS AssignedRole,
    
     StaffId,
-    DepartmentID,
+    facultyid,
+    departmentid,
     roles
 FROM tblStaffDirectory
 WHERE StaffId = @StaffId`
@@ -65,13 +71,14 @@ WHERE StaffId = @StaffId`
    .input('roleID', sql.Int, parseInt(roleID))
    .query(`SELECT RoleName FROM Roles WHERE RoleID = @roleID`)
 
-   const roleName = roles.recordset[0]?.RoleName;
+    const roleName = roles.recordset[0]?.RoleName;
+    const scopeId = String(roleID) === '4' ? user.facultyid : user.departmentid;
    
  
    const token = jwt.sign({
       id: user.StaffId,
       role: roleName,
-      departmentID: user.DepartmentID
+        departmentID: scopeId
    },
     process.env.JWT_SECRET, {expiresIn: '1d'})
 
@@ -85,7 +92,7 @@ WHERE StaffId = @StaffId`
                         name: user.name,
                         email: user.email,
                         role: roleName,
-                        department: user.DepartmentID
+                        department: scopeId
                     },
                   
                    

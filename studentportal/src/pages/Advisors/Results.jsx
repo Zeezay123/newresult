@@ -46,24 +46,29 @@ const Results = () => {
       if (prevCumRes.ok) {
         const data = await prevCumRes.json()
         setPreviousCumulative(data.data || [])
+        console.log('Previous Cumulative Data:', data.data) // Debug log
       }
 
       if (currentCoursesRes.ok) {
         const data = await currentCoursesRes.json()
         setCurrentCourses(data.students || [])
         setSessionInfo({ session: data.session, semester: data.semester })
+        console.log('Current Courses Data:', data.students) // Debug log
       }
 
       if (summaryRes.ok) {
         const data = await summaryRes.json()
         setSemesterSummary(data.data || [])
+        console.log('Semester Summary Data:', data.data) // Debug log
       }
 
       if (carryoversRes.ok) {
         const data = await carryoversRes.json()
         setCarryovers(data.students || [])
+        console.log('Carryovers Data:', data.students) // Debug log
       }
 
+      
     } catch (error) {
       console.error('Error fetching results:', error)
     } finally {
@@ -301,7 +306,7 @@ const Results = () => {
               value={rejectionReason}
               onChange={(e) => setRejectionReason(e.target.value)}
               placeholder="Enter rejection reason..."
-              className="w-full border rounded-lg p-3 mb-4 min-h-[120px] focus:outline-none focus:ring-2 focus:ring-red-500"
+              className="w-full border rounded-lg p-3 mb-4 min-h-30 focus:outline-none focus:ring-2 focus:ring-red-500"
               disabled={rejecting}
             />
             <div className="flex gap-3 justify-end">
@@ -364,7 +369,7 @@ const Results = () => {
                     <th className="px-4 py-3 text-center font-semibold">Units Passed</th>
                     <th className="px-4 py-3 text-center font-semibold">Cum. Points</th>
                     <th className="px-4 py-3 text-center font-semibold">CGPA</th>
-                    <th className="px-4 py-3 text-center font-semibold">Core Failed</th>
+                    <th className="px-4 py-3 text-center font-semibold">O/S </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -430,6 +435,7 @@ const Results = () => {
                       <th className="px-4 py-3 text-left font-semibold border border-gray-300 sticky left-0 bg-gray-50 z-10">
                         Matric No
                       </th>
+                      <th> Name </th>
                   {(() => {
                     // Get all unique courses across all students
                     const allCourses = new Map()
@@ -451,9 +457,9 @@ const Results = () => {
                         <div className="text-[10px] font-normal text-gray-600 mt-1">
                           ({course.CreditUnits}U {' '}
                           <span className={`${
-                            course.CourseType === 'core' ? 'text-blue-600' : 'text-green-600'
+                            course.CourseType === 'C' ? 'text-blue-600' : 'text-green-600'
                           }`}>
-                            {course.CourseType === 'core' ? 'C' : 'E'}
+                            {course.CourseType === 'C' ? 'C' : 'E'}
                           </span>)
                         </div>
                       </th>
@@ -478,6 +484,7 @@ const Results = () => {
                       <td className="px-4 py-3 font-mono font-semibold border border-gray-300 sticky left-0 bg-white z-10">
                         {student.MatricNo}
                       </td>
+                      <td className='px-3 py-3 font-mono font-semibold border border-gray-300'> <span>  {student.LastName}</span> <span> {student.OtherNames}</span>  </td>
                       {Array.from(allCourses.keys()).map((courseCode) => {
                         const course = student.courses.find(c => c.CourseCode === courseCode)
                         return (
@@ -537,6 +544,7 @@ const Results = () => {
                   <tr>
                     <th rowSpan="2" className="px-4 py-3 text-left font-semibold border-r">S/N</th>
                     <th rowSpan="2" className="px-4 py-3 text-left font-semibold border-r">Matric No</th>
+                    <th rowSpan="2" className="px-4 py-3 text-left font-semibold border-r">Name</th>
                     
                     <th colSpan="5" className="px-4 py-2 text-center font-semibold bg-blue-50 border-b">
                       Current Semester
@@ -547,18 +555,18 @@ const Results = () => {
                   </tr>
                   <tr>
                     {/* Current Semester Headers */}
-                    <th className="px-4 py-2 text-center font-semibold bg-blue-50">Units</th>
-                    <th className="px-4 py-2 text-center font-semibold bg-blue-50">Passed</th>
-                    <th className="px-4 py-2 text-center font-semibold bg-blue-50">Points</th>
+                    <th className="px-4 py-2 text-center font-semibold bg-blue-50">Total Units</th>
+                    <th className="px-4 py-2 text-center font-semibold bg-blue-50">Total Passed</th>
+                    <th className="px-4 py-2 text-center font-semibold bg-blue-50">GP</th>
                     <th className="px-4 py-2 text-center font-semibold bg-blue-50">GPA</th>
-                    <th className="px-4 py-2 text-center font-semibold bg-blue-50 border-r">Core Failed</th>
+                    <th className="px-4 py-2 text-center font-semibold bg-blue-50 border-r">Units O/S </th>
                     
                     {/* Cumulative Headers */}
-                    <th className="px-4 py-2 text-center font-semibold bg-green-50">Units</th>
-                    <th className="px-4 py-2 text-center font-semibold bg-green-50">Passed</th>
-                    <th className="px-4 py-2 text-center font-semibold bg-green-50">Points</th>
+                    <th className="px-4 py-2 text-center font-semibold bg-green-50">Total Units</th>
+                    <th className="px-4 py-2 text-center font-semibold bg-green-50">Total Passed</th>
+                    <th className="px-4 py-2 text-center font-semibold bg-green-50">GP</th>
                     <th className="px-4 py-2 text-center font-semibold bg-green-50">CGPA</th>
-                    <th className="px-4 py-2 text-center font-semibold bg-green-50">Core Failed</th>
+                    <th className="px-4 py-2 text-center font-semibold bg-green-50">O/S Units</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -572,7 +580,8 @@ const Results = () => {
                     paginate(semesterSummary, currentPage3).map((student, idx) => (
                       <tr key={student.MatricNo} className="border-b hover:bg-gray-50">
                         <td className="px-4 py-3 border-r">{((currentPage3 - 1) * itemsPerPage) + idx + 1}</td>
-                        <td className="px-4 py-3 font-medium border-r">{student.MatricNo}</td>
+                        <td className="px-4 py-3 font-medium border-r">{student.MatNo}</td>
+                        <td className="px-4 py-3 font-medium border-r">{student.LastName} {student.OtherNames}</td>
                         
                         {/* Current Semester */}
                         <td className="px-4 py-3 text-center bg-blue-50">{student.CurrentSemesterUnits || 0}</td>

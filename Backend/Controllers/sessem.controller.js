@@ -65,6 +65,39 @@ export const getSemesters = async (req, res, next) => {
 
 // Get active session
 export const getActiveSession = async (req, res, next) => {
+                try {
+                    const pool = await poolPromise;
+
+                    if (!pool) {
+                        return next(errorHandler(500, "Database connection failed"));
+                    }
+
+                    const result = await pool.request()
+                        .query(`
+                            SELECT 
+                                SessionID,
+                                SessionName,
+                                isActive
+                            FROM dbo.sessions
+                            WHERE isActive = 1
+                        `);
+
+                    if (result.recordset.length === 0) {
+                        return next(errorHandler(404, "No active session found"));
+                    }
+
+                    res.status(200).json({
+                        success: true,
+                        session: result.recordset[0]
+                    });
+
+                } catch (error) {
+                    console.error('Error fetching active session:', error);
+                    return next(errorHandler(500, "Error fetching active session: " + error.message));
+                }
+};
+
+export const getActiveSemester = async (req, res, next) => {
     try {
         const pool = await poolPromise;
 
@@ -75,25 +108,24 @@ export const getActiveSession = async (req, res, next) => {
         const result = await pool.request()
             .query(`
                 SELECT 
-                    SessionID,
-                    SessionName,
+                    SemesterID,
+                    SemesterName,
                     isActive
-                FROM dbo.sessions
-                WHERE isActive = 1
+                FROM dbo.semesters
+                WHERE isActive = 'true'
             `);
 
         if (result.recordset.length === 0) {
-            return next(errorHandler(404, "No active session found"));
+            return next(errorHandler(404, "No active semester found"));
         }
 
         res.status(200).json({
             success: true,
-            session: result.recordset[0]
+            semester: result.recordset[0]
         });
 
     } catch (error) {
-        console.error('Error fetching active session:', error);
-        return next(errorHandler(500, "Error fetching active session: " + error.message));
+        console.error('Error fetching active semester:', error);
+        return next(errorHandler(500, "Error fetching active semester: " + error.message));
     }
 };
- 

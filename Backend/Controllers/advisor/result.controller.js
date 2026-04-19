@@ -949,10 +949,10 @@ export const getCurrentSemesterCourses = async (req, res, next) => {
                 };
             }
             studentMap[row.MatricNo].courses.push({
-                CourseCode: row.CourseCode,
-                CourseName: row.CourseName,
-                CourseType: row.CourseType,
-                CreditUnits: row.CreditUnits,
+                CourseCode: row.course_code,
+                CourseName: row.course_title,
+                CourseType: row.course_type,
+                CreditUnits: row.credit_unit,
                 TotalScore: row.TotalScore,
                 Grade: row.Grade,
                 GradePoint: row.GradePoint
@@ -1150,15 +1150,17 @@ export const getPreviousSemesterCarryovers = async (req, res, next) => {
         const previousSemesterID = activeSemesterID === 2 ? 1 : 2;
         const previousSessionID = activeSemesterID === 1 ? activeSessionID - 1 : activeSessionID;
 
-        // Get failed core courses from previous semester
+        // Get outstanding failed core courses from past sessions/semesters.
         const query = `
-            SELECT 
+            SELECT DISTINCT
                 r.MatricNo,
                 s.LastName,
                 s.OtherNames,
+                c.course_id,
                 c.course_code,
                 c.course_title,
                 c.credit_unit,
+                c.SemesterID AS CourseSemester,
                 r.TotalScore,
                 r.Grade
             FROM dbo.results r
@@ -1167,12 +1169,35 @@ export const getPreviousSemesterCarryovers = async (req, res, next) => {
             WHERE s.LevelID = @LevelID
                 AND s.ProgrammeID = @ProgrammeID
                 AND s.department = @DepartmentID
-                AND r.SessionID = @PreviousSessionID
-                AND r.SemesterID = @PreviousSemesterID
                 AND c.course_type = 'C'
                 AND r.Grade = 'F'
                 AND r.ResultStatus = 'Approved'
                 AND r.ResultType = 'Exam'
+                AND r.Advisor = 'Approved'
+                AND r.HOD_Approval = 'Approved'
+                AND (
+                    r.SessionID < @ActiveSessionID
+                    OR (r.SessionID = @ActiveSessionID AND r.SemesterID < @ActiveSemesterID)
+                )
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM dbo.results r2
+                    WHERE r2.MatricNo = r.MatricNo
+                      AND r2.CourseID = r.CourseID
+                      AND r2.Grade != 'F'
+                      AND r2.ResultStatus = 'Approved'
+                      AND r2.ResultType = 'Exam'
+                      AND r2.Advisor = 'Approved'
+                      AND r2.HOD_Approval = 'Approved'
+                )
+                AND EXISTS (
+                    SELECT 1
+                    FROM dbo.course_registrations cr
+                    CROSS APPLY STRING_SPLIT(COALESCE(CONVERT(NVARCHAR(MAX), cr.courses), ''), ',') reg
+                    WHERE cr.mat_no = s.MatNo
+                      AND TRY_CAST(LTRIM(RTRIM(reg.value)) AS INT) = c.course_id
+                      AND cr.session = @ActiveSessionID
+                )
             ORDER BY r.MatricNo, c.course_code
         `;
 
@@ -1180,27 +1205,136 @@ export const getPreviousSemesterCarryovers = async (req, res, next) => {
             .input('LevelID', sql.Int, assignedLevelID)
             .input('ProgrammeID', sql.Int, assignedProgrammeID)
             .input('DepartmentID', sql.Int, parseInt(departmentId))
-            .input('PreviousSessionID', sql.Int, previousSessionID)
-            .input('PreviousSemesterID', sql.Int, previousSemesterID)
+            .input('ActiveSessionID', sql.Int, activeSessionID)
+            .input('ActiveSemesterID', sql.Int, activeSemesterID)
             .query(query);
 
-        // Group by student
+        const missedQuery = `
+            SELECT 
+                s.MatNo AS MatricNo,
+                s.LastName,
+                s.OtherNames,
+                c.course_id,
+                c.course_type,
+                c.credit_unit,
+                c.course_title,
+                c.course_code,
+                'Missed' AS CourseStatus
+            FROM dbo.student s
+            INNER JOIN dbo.courses c ON
+                c.course_type = 'C'
+                AND c.level_id <= @LevelID
+                AND c.SemesterID = @PreviousSemesterID
+            WHERE s.LevelID = @LevelID
+                AND s.ProgrammeID = @ProgrammeID
+                AND s.Department = @DepartmentID
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM dbo.course_registrations cr
+                    CROSS APPLY STRING_SPLIT(COALESCE(CONVERT(NVARCHAR(MAX), cr.courses), ''), ',') reg
+                    WHERE cr.mat_no = s.MatNo
+                      AND TRY_CAST(LTRIM(RTRIM(reg.value)) AS INT) = c.course_id
+                      AND cr.session <= @ActiveSessionID
+                )
+            ORDER BY s.MatNo, c.course_code
+        `;
+
+        const missedResult = await pool.request()
+            .input('LevelID', sql.Int, assignedLevelID)
+            .input('ProgrammeID', sql.Int, assignedProgrammeID)
+            .input('DepartmentID', sql.Int, parseInt(departmentId))
+            .input('PreviousSemesterID', sql.Int, previousSemesterID)
+            .input('ActiveSessionID', sql.Int, activeSessionID)
+            .query(missedQuery);
+
+        const combinedCourseIDs = Array.from(
+            new Set([
+                ...result.recordset.map((row) => row.course_id),
+                ...missedResult.recordset.map((row) => row.course_id)
+            ])
+        );
+
+        let finalResult = { recordset: [] };
+        if (combinedCourseIDs.length > 0) {
+            const courseParamNames = combinedCourseIDs.map((_, index) => `@CourseID${index}`);
+            const finalQuery = `
+                SELECT
+                    r.MatricNo,
+                    c.course_id,
+                    c.course_code,
+                    c.course_title,
+                    c.credit_unit,
+                    c.course_type,
+                    r.TotalScore,
+                    r.Grade
+                FROM dbo.results r
+                INNER JOIN dbo.courses c ON r.CourseID = c.course_id
+                INNER JOIN dbo.student s ON r.MatricNo = s.MatNo
+                WHERE c.course_id IN (${courseParamNames.join(',')})
+                    AND s.LevelID = @LevelID
+                    AND s.ProgrammeID = @ProgrammeID
+                    AND s.Department = @DepartmentID
+                    AND r.SessionID = @ActiveSessionID
+                    AND r.SemesterID = @ActiveSemesterID
+                    AND r.ResultStatus = 'Approved'
+                    AND r.ResultType = 'Exam'
+                    AND r.Advisor = 'Approved'
+                    AND r.HOD_Approval = 'Approved'
+                ORDER BY r.MatricNo, c.course_code
+            `;
+
+            const finalRequest = pool.request()
+                .input('LevelID', sql.Int, assignedLevelID)
+                .input('ProgrammeID', sql.Int, assignedProgrammeID)
+                .input('DepartmentID', sql.Int, parseInt(departmentId))
+                .input('ActiveSessionID', sql.Int, activeSessionID)
+                .input('ActiveSemesterID', sql.Int, activeSemesterID);
+
+            combinedCourseIDs.forEach((courseID, index) => {
+                finalRequest.input(`CourseID${index}`, sql.Int, courseID);
+            });
+
+            finalResult = await finalRequest.query(finalQuery);
+        }
+
         const studentMap = {};
-        result.recordset.forEach(row => {
+        result.recordset.forEach((row) => {
             if (!studentMap[row.MatricNo]) {
                 studentMap[row.MatricNo] = {
                     MatricNo: row.MatricNo,
                     LastName: row.LastName,
                     OtherNames: row.OtherNames,
-                    failedCourses: []
+                    failedCourses: [],
+                    missedCourses: []
                 };
             }
             studentMap[row.MatricNo].failedCourses.push({
-                CourseCode: row.CourseCode,
-                CourseName: row.CourseName,
-                CreditUnits: row.CreditUnits,
+                CourseID: row.course_id,
+                CourseCode: row.course_code,
+                CourseName: row.course_title,
+                CreditUnits: row.credit_unit,
+                CourseSemester: row.CourseSemester,
                 TotalScore: row.TotalScore,
                 Grade: row.Grade
+            });
+        });
+
+        missedResult.recordset.forEach((row) => {
+            if (!studentMap[row.MatricNo]) {
+                studentMap[row.MatricNo] = {
+                    MatricNo: row.MatricNo,
+                    LastName: row.LastName,
+                    OtherNames: row.OtherNames,
+                    failedCourses: [],
+                    missedCourses: []
+                };
+            }
+            studentMap[row.MatricNo].missedCourses.push({
+                CourseID: row.course_id,
+                CourseCode: row.course_code,
+                CourseName: row.course_title,
+                CreditUnits: row.credit_unit,
+                CourseType: row.course_type
             });
         });
 
@@ -1209,11 +1343,103 @@ export const getPreviousSemesterCarryovers = async (req, res, next) => {
             previousSession: previousSessionID,
             previousSemester: previousSemesterID,
             students: Object.values(studentMap),
+            failedCarryovers: result.recordset,
+            missedCarryovers: missedResult.recordset,
+            currentSemesterRetakes: finalResult.recordset,
+            courseCount: combinedCourseIDs.length,
             count: Object.keys(studentMap).length
         });
 
     } catch (error) {
         console.error('Error in getPreviousSemesterCarryovers:', error);
+        return next(errorHandler(500, `Server error: ${error.message}`));
+    }
+}
+
+// Advisor dashboard summary cards.
+// - pendingApprovals: HOD-approved exam results not yet advisor-approved
+// - totalStudents: all students in advisor-assigned level/programme
+// - approvedResults: HOD-approved exam results approved by advisor
+export const getDashboardStats = async (req, res, next) => {
+    const StaffCode = req.user.id;
+    const departmentId = req.user.departmentID;
+
+    if (!departmentId) {
+        return next(errorHandler(403, "Department information missing in token"));
+    }
+
+    try {
+        const pool = await poolPromise;
+
+        if (!pool) {
+            return next(errorHandler(500, "Database connection failed"));
+        }
+
+        const advisorLevel = await pool.request()
+            .input('StaffCode', sql.VarChar, StaffCode)
+            .input('DepartmentID', sql.Int, parseInt(departmentId))
+            .query(`
+                SELECT TOP 1 LevelID, ProgrammeID
+                FROM dbo.Level_Advisors
+                WHERE StaffCode = @StaffCode
+                  AND DepartmentID = @DepartmentID
+            `);
+
+        if (advisorLevel.recordset.length === 0) {
+            return next(errorHandler(404, "No level assigned to you as advisor"));
+        }
+
+        const assignedLevelID = advisorLevel.recordset[0].LevelID;
+        const assignedProgrammeID = advisorLevel.recordset[0].ProgrammeID;
+
+        const totalStudentsResult = await pool.request()
+            .input('LevelID', sql.Int, assignedLevelID)
+            .input('ProgrammeID', sql.Int, assignedProgrammeID)
+            .input('DepartmentID', sql.Int, parseInt(departmentId))
+            .query(`
+                SELECT COUNT(*) AS TotalStudents
+                FROM dbo.student s
+                WHERE s.LevelID = @LevelID
+                  AND s.ProgrammeID = @ProgrammeID
+                  AND s.Department = @DepartmentID
+            `);
+
+        const resultCounts = await pool.request()
+            .input('LevelID', sql.Int, assignedLevelID)
+            .input('ProgrammeID', sql.Int, assignedProgrammeID)
+            .input('DepartmentID', sql.Int, parseInt(departmentId))
+            .query(`
+                SELECT
+                    SUM(CASE
+                        WHEN (r.Advisor IS NULL OR LTRIM(RTRIM(r.Advisor)) <> 'Approved') THEN 1
+                        ELSE 0
+                    END) AS PendingApprovals,
+                    SUM(CASE
+                        WHEN LTRIM(RTRIM(r.Advisor)) = 'Approved' THEN 1
+                        ELSE 0
+                    END) AS ApprovedResults
+                FROM dbo.results r
+                INNER JOIN dbo.student s ON r.MatricNo = s.MatNo
+                WHERE s.LevelID = @LevelID
+                  AND s.ProgrammeID = @ProgrammeID
+                  AND s.Department = @DepartmentID
+                  AND r.ResultType = 'Exam'
+                  AND r.ResultStatus = 'Approved'
+            `);
+
+        const statsRow = resultCounts.recordset[0] || {};
+        const studentsRow = totalStudentsResult.recordset[0] || {};
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                pendingApprovals: Number(statsRow.PendingApprovals || 0),
+                totalStudents: Number(studentsRow.TotalStudents || 0),
+                approvedResults: Number(statsRow.ApprovedResults || 0)
+            }
+        });
+    } catch (error) {
+        console.error('Error in getDashboardStats:', error);
         return next(errorHandler(500, `Server error: ${error.message}`));
     }
 }
@@ -1329,7 +1555,7 @@ export const approveLevelResults = async(req,res,next)=>{
                 AdvisorApprovedBy = @StaffCode
             FROM dbo.results r
             INNER JOIN dbo.student s ON r.MatricNo = s.MatNo
-            INNER JOIN dbo.course c ON r.CourseID = c.course_id
+            INNER JOIN dbo.courses c ON r.CourseID = c.course_id
             WHERE s.LevelID = @LevelID
                 AND s.ProgrammeID = @ProgrammeID
                 AND s.department = @DepartmentID
@@ -1626,7 +1852,7 @@ export const downloadLevelResults = async(req,res,next)=>{
                 r.Grade
             FROM dbo.student s
             INNER JOIN dbo.results r ON s.MatNo = r.MatricNo
-            INNER JOIN dbo.course c ON r.CourseID = c.course_id
+            INNER JOIN dbo.courses c ON r.CourseID = c.course_id
             WHERE s.LevelID = @LevelID
                 AND s.ProgrammeID = @ProgrammeID
                 AND s.department = @DepartmentID
@@ -1657,7 +1883,7 @@ export const downloadLevelResults = async(req,res,next)=>{
                 SUM(CASE WHEN r.SessionID = @SessionID AND r.SemesterID = @SemesterID THEN r.GradePoint * c.credit_unit ELSE 0 END) AS CurrentSemesterGradePoints,
                 CASE 
                     WHEN SUM(CASE WHEN r.SessionID = @SessionID AND r.SemesterID = @SemesterID THEN c.credit_unit ELSE 0 END) > 0
-                    THEN CAST(SUM(CASE WHEN r.SessionID = @SessionID AND r.SemesterID = @SemesterID THEN r.GradePoint * c.credit_Units ELSE 0 END) / 
+                    THEN CAST(SUM(CASE WHEN r.SessionID = @SessionID AND r.SemesterID = @SemesterID THEN r.GradePoint * c.credit_unit ELSE 0 END) / 
                          SUM(CASE WHEN r.SessionID = @SessionID AND r.SemesterID = @SemesterID THEN c.credit_unit ELSE 0 END) AS DECIMAL(3,2))
                     ELSE 0.00
                 END AS CurrentGPA,

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import UploadedResultTable from '../../components/Layout/lecturer/UploadedResultTable'
 import { useSelector } from 'react-redux'
 import Button from '../../components/ui/Button'
+import ManualUpload from '../../components/Layout/lecturer/ManualUpload'
 
 const SubmitResults = () => {
   const [sessions, setSessions] = useState([])
@@ -20,6 +21,8 @@ const SubmitResults = () => {
   const fileInputRef = React.useRef(null)
   const lecturerId = useSelector((state) => state.user.id);
   const [uploadSuccess, setUploadSuccess] = useState(null);
+
+  const [showManualUpload, setShowManualUpload] = useState(false);
 
 
   useEffect(() => {
@@ -219,6 +222,9 @@ const formData = new FormData();
                 ))}
             </Select>
         </div>
+
+     
+
        </div>
        </div>
 
@@ -290,6 +296,12 @@ const formData = new FormData();
 </div>
 
 <UploadedResultTable uploadSuccess={uploadSuccess} selectedSemester={selectedSemester} selectedCourse={selectedCourse} selectedSession={selectedSession} />
+   
+   
+
+
+  
+
     </div>
   )
 }

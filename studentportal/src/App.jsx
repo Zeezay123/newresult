@@ -5,6 +5,7 @@ import { useSelector } from 'react-redux'
 
 // Auth Pages
 import Login from "./pages/auth/Login.jsx"
+import Signout from "./pages/auth/Signout.jsx"
 import Layout from "./components/Layout/Layout.jsx"
 
 // HOD Pages
@@ -12,6 +13,8 @@ import HodDashboard from './pages/hod/Dashboard.jsx'
 import AssignCourse from './pages/hod/AssignCourse.jsx'
 import Lecturers from './pages/hod/Lecturers.jsx'
 import LevelResult from './pages/hod/LevelResult.jsx'
+import LectureReport from './pages/hod/LectureReport.jsx'
+import StudentReport from './pages/hod/StudentReport.jsx'
 
 // Lecturer Pages
 import LecturerDashboard from './pages/lecturer/Dashboard.jsx'
@@ -45,6 +48,11 @@ import UploadedResults from "./pages/lecturer/UploadedResults.jsx"
 import AssignAdvisors from "./pages/hod/AssignAdvisors.jsx"
 import StudentLogin from "./pages/auth/StudentLogin.jsx"
 import StaffLogin from "./pages/auth/StaffLogin.jsx"
+import SetScore from "./pages/hod/SetScore.jsx"
+import DeanDashboard from './pages/dean/Dashboard.jsx'
+import DeanLevelResults from './pages/dean/LevelResults.jsx'
+import DeanLecturerResubmission from './pages/dean/LecturerResubmission.jsx'
+import DeanStudentReport from './pages/dean/StudentReport.jsx'
 
 
 function App() {
@@ -56,7 +64,7 @@ function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/student-login" element={<StudentLogin />} />
       <Route path="/staff-login" element={<StaffLogin/>} />
-      
+      <Route path="/signout" element={<Signout/>} />
       {/* Default Route - Redirect based on role */}
       <Route path="/" element={<RoleBasedRedirect />} />
 
@@ -74,6 +82,9 @@ function App() {
         <Route path="/hod/review-test-results" element={<ReviewTestResult/>} />
         <Route path="/hod/assign-advisors" element={<AssignAdvisors />} />
         <Route path="/hod/level-results" element={<LevelResult />} />
+        <Route path="/hod/lecturer-report" element={<LectureReport />} />
+        <Route path="/hod/student-report" element={<StudentReport />} />
+        <Route path="/hod/scoretpy" element={<SetScore />} />
         </Route>
       </Route>
 
@@ -118,6 +129,16 @@ function App() {
         </Route>
       </Route>
 
+      {/* Dean Routes - Only accessible by Dean */}
+      <Route element={<RoleRoute allowedRoles={['Dean']} />}>
+      <Route element={<Layout/>} >
+        <Route path="/dean/dashboard" element={<DeanDashboard/>} />
+        <Route path="/dean/level-results" element={<DeanLevelResults/>} />
+        <Route path="/dean/lecturer-resubmission" element={<DeanLecturerResubmission/>} />
+        <Route path="/dean/student-report" element={<DeanStudentReport/>} />
+        </Route>
+      </Route>
+
       {/* Catch all - redirect to login */}
       <Route path="*" element={<Navigate to="/login" replace />} />
    </Routes>
@@ -151,6 +172,8 @@ function RoleBasedRedirect() {
       return <Navigate to="/advisor/dashboard" replace />;
     case 'senate':
       return <Navigate to="/senate/dashboard" replace />;
+    case 'dean':
+      return <Navigate to="/dean/dashboard" replace />;
     default:
       console.log('Unknown role:', role);
       return <Navigate to="/login" replace />;

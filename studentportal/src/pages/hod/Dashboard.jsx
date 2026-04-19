@@ -4,8 +4,10 @@ import Mainbody from '../../components/Layout/hod/Mainbody.jsx'
 import Sidebar from '../../components/Layout/Sidebar.jsx'
 import Submissions from '../../components/Layout/hod/Submissions.jsx'
 import DashOverview from '../../components/Layout/hod/DashOverview.jsx'
-import { useSelector } from 'react-redux'
-import Button from '../../components/ui/Button.jsx'
+import { useDispatch, useSelector } from 'react-redux'
+import Button from '../../components/ui/Button.jsx';
+import { signInFailure, signInStart, signInSuccess } from '../../Redux/user/slice.js'
+import { useNavigate } from 'react-router-dom'
 
 export const  ExpandContext = createContext()
 const Dashboard = () => {
@@ -15,6 +17,8 @@ const Dashboard = () => {
   const [isAdvisor, setAdvisor] = useState(false);
 
   const user = useSelector((state) => state.user.id);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
 
 
   useEffect(() => {
@@ -36,10 +40,12 @@ const Dashboard = () => {
 
   const goToAdvisorDash = async (selected ) => {
   
+    const url = selected === 'lecturer' ? `/api/auth/login` : `/api/auth/login`;
+    const role = selected === 'lecturer' ? 'Lecturer' : 'Advisor';
    try{
   
     dispatch(signInStart());
-         const response = await fetch('/api/auth/login', {
+         const response = await fetch(url, {
               method: 'POST',
               headers: {
                   'Content-Type': 'application/json'
@@ -48,7 +54,7 @@ const Dashboard = () => {
              
               body: JSON.stringify({
                   username:user,
-                  role: 'advisor'
+                  role: role
               })
           });
   
@@ -79,7 +85,7 @@ const Dashboard = () => {
           }
   
         }catch(error){
-  
+          dispatch(signInFailure(error.message || "Couldn't switch dashboard"));
         }
       }
 
@@ -93,8 +99,8 @@ const Dashboard = () => {
    </div>   
 
    <div className='flex gap-4'>
- {isLecturer && <Button text="Lecturer Dashboard" onClick={()=>goToAdvisorDash('lecturer')} />}
- {isAdvisor && <Button text="Advisor Dashboard" onClick={()=>goToAdvisorDash('advisor')} />}
+ {isLecturer && <Button text="Lecturer Dashboard" onClick={() => goToAdvisorDash('lecturer')} />}
+ {isAdvisor && <Button text="Advisor Dashboard" onClick={() => goToAdvisorDash('advisor')} />}
    </div>
 
   </div> 

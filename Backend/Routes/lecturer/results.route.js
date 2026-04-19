@@ -1,6 +1,6 @@
 import express from 'express';
 import multer from 'multer';
-import { downloadResultTemplate, uploadResults, getUploadedResults, updateScoreById, submitResultsToHOD } from '../../Controllers/lecturer/results.controller.js';
+import { downloadResultTemplate, uploadResults, getUploadedResults, updateScoreById, submitResultsToHOD, ManualResultUpload, getResultUploadTemplate } from '../../Controllers/lecturer/results.controller.js';
 import { VerifyUser } from '../../utils/VerifyUser.js';
 import { getTestResults } from '../../Controllers/hod/results.controller.js';
 
@@ -35,5 +35,7 @@ router.put('/updateResult/', VerifyUser, updateScoreById);
 router.put('/submitToHOD/', VerifyUser, submitResultsToHOD);
 router.get('/testResults/:id', VerifyUser, getTestResults);
 router.get('/editResults/:id', VerifyUser, getTestResults);
+router.post('/mResultupload/', VerifyUser, ManualResultUpload)
+router.get('/uploadTemplate',VerifyUser, getResultUploadTemplate)
 
 export default router;

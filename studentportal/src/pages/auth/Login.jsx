@@ -8,7 +8,7 @@ import { signInFailure,signInSuccess,signInStart } from '../../Redux/user/slice'
 
 const Login = () => {
   const [formData, setFormData] = useState({
-    username: ''
+    username: '', password:''
   });
   
   const [departments, setDepartments] = useState([]);
@@ -104,11 +104,11 @@ const Login = () => {
 }
 
   return (
-    <section className='min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100 py-12 px-4'>
+    <section className='min-h-screen flex items-center justify-center bg-linear-to-br from-blue-50 to-blue-100 py-12 px-4'>
       <div className='w-full max-w-6xl grid md:grid-cols-2 bg-white rounded-2xl shadow-2xl overflow-hidden'>
         
         {/* Left Side - Branding */}
-        <div className='bg-gradient-to-br from-blue-600 to-blue-800 p-12 flex flex-col justify-center text-white'>
+        <div className='bg-linear-to-br from-blue-600 to-blue-800 p-12 flex flex-col justify-center text-white'>
           <div className='mb-8'>
             <h1 className='text-4xl font-bold mb-4'>DELSU Result Portal</h1>
             <p className='text-blue-100 text-lg'>Please sign in to access your dashboard</p>
@@ -169,53 +169,7 @@ const Login = () => {
               />
             </div>
 
-            {/* Role */}
-            <div>
-              <Label htmlFor='role' value='Role' className='mb-2 block font-semibold' />
-              <Select
-                id='role'
-                name='role'
-                icon={UserCog}
-                value={formData.role}
-                onChange={handleChange}
-                required
-                color='blue'
-              >
-                <option value=''>Select your role</option>
-                <option value='student'>Student</option>
-                <option value='lecturer'>Lecturer</option>
-                <option value='advisor'>Advisor</option>
-                <option value='admin'>HOD</option>
-                <option value='senate'>Senate</option>
-                <option value='superadmin'>Super Admin</option>
-              </Select>
-            </div>
-
-            {/* Department - Hidden for Senate and SuperAdmin */}
-            {!['senate', 'superadmin'].includes(formData.role?.toLowerCase()) && (
-            <div>
-              <Label htmlFor='department' value='Department' className='mb-2 block font-semibold' />
-              <Select
-                id='department'
-                name='department'
-                icon={Building2}
-                value={formData.department}
-                onChange={handleChange}
-                required
-                color='blue'
-                disabled={loadingDepartments}
-              >
-                <option value=''>
-                  {loadingDepartments ? 'Loading departments...' : 'Select your department'}
-                </option>
-                {departments.map((dept) => (
-                  <option key={dept.DepartmentID} value={dept.DepartmentID}>
-                    {dept.DepartmentName.charAt(0).toUpperCase() + dept.DepartmentName.slice(1)}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            )}
+           
 
             {/* Submit Button */}
             <Button

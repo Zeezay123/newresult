@@ -89,7 +89,7 @@ const handleSaveChanges = async()=>{
   if (!selectedResult) return alert('No result selected');
    
   try {
-    const response = await fetch(`/api/lecturers/results/updateResult/${lectid}`, {
+    const response = await fetch(`/api/lecturers/results/updateResult`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',

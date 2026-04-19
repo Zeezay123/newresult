@@ -263,7 +263,7 @@ LEFT JOIN dbo.Levels l ON c.level_id = l.LevelID
 LEFT JOIN dbo.tblStaffDirectory s ON ca.LecturerID = s.StaffId
 LEFT JOIN dbo.AppDepartment d ON d.DepartmentID = @hodDept
 WHERE  
-c.Semester = @semesterID
+c.semester = @semesterID
 AND
 EXISTS (
     SELECT 1
@@ -377,11 +377,26 @@ export const getCourseStats = async (req, res, next) => {
             FROM CourseStatus
         `;
 
+        const queryTwo =`
+           SELECT COUNT(DISTINCT c.course_id) AS TotalCourses,
+            SUM(CASE WHEN ca.LecturerID IS NOT NULL THEN 1 ELSE 0 END) AS AssignedCourses,
+            SUM(CASE WHEN ca.LecturerID IS NULL THEN 1 ELSE 0 END) AS UnassignedCourses
+        FROM dbo.courses c
+        INNER JOIN dbo.course_assignment ca ON ca.CourseID = c.course_id
+        CROSS APPLY STRING_SPLIT(ISNULL(c.discipline, ''), ',') AS courseDiscipline
+        INNER JOIN dbo.Disciplines d ON d.DisciplineID = TRY_CAST(LTRIM(RTRIM(courseDiscipline.value)) AS INT)
+        where d.DepartmentID = @hodDept
+
+            and  c.semester = @semesterID
+            AND   ca.SessionID = @sessionID
+                 
+        `
+
         const result = await pool.request()
             .input('hodDept', sql.Int, hodDepartmentID)
             .input('sessionID', sql.Int, sessionID)
             .input('semesterID', sql.Int, semesterID)
-            .query(query);
+            .query(queryTwo);
 
         const stats = result.recordset[0];
 

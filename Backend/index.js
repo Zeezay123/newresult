@@ -11,6 +11,8 @@ import studentsRoutes from './Routes/hod/students.route.js';
 import HodResultRoutes from './Routes/hod/results.route.js';
 import levelandlecturersRoutes from './Routes/hod/advisor.route.js';
 import hodRoleRoutes from './Routes/hod/roles.route.js';
+import logRoutes from './Routes/hod/log.router.js';
+import scoretypeRoutes from './Routes/hod/scoretype.route.js';
 
 import sessionSemesterRoutes from './Routes/sessem.route.js';
 import levelRoutes from './Routes/level.route.js';
@@ -20,6 +22,7 @@ import lecturersCourseRoutes from './Routes/lecturer/courses.route.js';
 import lecturersResultsRoutes from './Routes/lecturer/results.route.js';
 import lecturesStudentsRoutes from './Routes/lecturer/students.route.js'
 import lectureRoleRoutes from './Routes/lecturer/role.route.js';
+import lecturersScoretypeRoutes from './Routes/lecturer/scoretype.route.js';
 
 // advisor routes
 import advisorResultRoutes from './Routes/Advisor/result.route.js';
@@ -27,9 +30,14 @@ import advisorRoleRoutes from './Routes/Advisor/roles.route.js';
 
 // senate routes
 import senateResultRoutes from './Routes/senate/results.route.js';
+import senateStateRoutes from './Routes/senate/state.route.js';
+import deanResultRoutes from './Routes/dean/results.route.js';
 
 //student routes
 import studentResultRoutes from './Routes/student/result.route.js';
+
+// results engine routes
+import resultsEngineRoutes from './Routes/resultsEngine.route.js';
 
 const app = express();
 
@@ -66,12 +74,16 @@ app.use(`/api/sessions`, sessionSemesterRoutes)
 app.use('/api/levels', levelRoutes);
 app.use('/api/hod/advisors', levelandlecturersRoutes)
 app.use('/api/hod/roles', hodRoleRoutes);
+app.use('/api/hod/logs', logRoutes);
+app.use('/api/hod/scoretypes', scoretypeRoutes);
+
 // lecturersRoutes
 
 app.use('/api/lecturers', lecturersCourseRoutes)
 app.use('/api/lecturers/results', lecturersResultsRoutes)
 app.use('/api/lecturers/students', lecturesStudentsRoutes)
 app.use('/api/lecturers/roles', lectureRoleRoutes)
+app.use('/api/lecturers/scoretypes', lecturersScoretypeRoutes)
 
 // advisor routes
 app.use('/api/advisor', advisorResultRoutes);
@@ -80,9 +92,16 @@ app.use('/api/programmes/', programmeRoutes);
 
 // senate routes
 app.use('/api/senate/results', senateResultRoutes);
+app.use('/api/senate/results/stat', senateStateRoutes);
+
+// dean routes
+app.use('/api/dean/results', deanResultRoutes);
 
 // studentsRoutes
 app.use('/api/students/results', studentResultRoutes);
+
+// results engine routes (normalization and sync)
+app.use('/api/results-engine', resultsEngineRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
