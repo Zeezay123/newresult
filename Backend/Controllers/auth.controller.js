@@ -5,20 +5,18 @@ import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 dotenv.config();
 
-// const isProduction = process.env.NODE_ENV === 'production';
-// const useSecureCookie = process.env.COOKIE_SECURE === 'true' || isProduction;
-// let cookieSameSite = (process.env.COOKIE_SAMESITE || (isProduction ? 'none' : 'lax')).toLowerCase();
+const isProduction = process.env.NODE_ENV === 'production';
+const useSecureCookie = process.env.COOKIE_SECURE === 'true' || isProduction;
+let cookieSameSite = (process.env.COOKIE_SAMESITE || (isProduction ? 'lax' : 'lax')).toLowerCase();
 
-// Browsers reject SameSite=None cookies unless Secure=true.
-// On local HTTP, force Lax to keep auth working.
-// if (cookieSameSite === 'none' && !useSecureCookie) {
-//     cookieSameSite = 'lax';
-// }
+if (cookieSameSite === 'none' && !useSecureCookie) {
+    cookieSameSite = 'lax';
+}
 
 const authCookieOptions = {
     httpOnly: true,
-    secure: false,
-    sameSite: 'lax'
+    secure: useSecureCookie,
+    sameSite: cookieSameSite
 };
 
 

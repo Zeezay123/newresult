@@ -4,11 +4,18 @@ import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 dotenv.config();
 
+const isProduction = process.env.NODE_ENV === 'production';
+const useSecureCookie = process.env.COOKIE_SECURE === 'true' || isProduction;
+let cookieSameSite = (process.env.COOKIE_SAMESITE || (isProduction ? 'lax' : 'lax')).toLowerCase();
+
+if (cookieSameSite === 'none' && !useSecureCookie) {
+    cookieSameSite = 'lax';
+}
 
 const authCookiesOptions = {
     httpOnly: true,
-    secure: false,
-    sameSite: 'lax'
+    secure: useSecureCookie,
+    sameSite: cookieSameSite
 };
 
 export const staffSignin = async (req, res, next) => {
