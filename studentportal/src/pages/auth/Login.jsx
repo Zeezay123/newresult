@@ -94,7 +94,7 @@ const Login = () => {
                email: data.email
            }));
            // Redirect to root - will automatically redirect based on role
-           return navigate('/');
+           return navigate('/redirect');
         }
 
     }catch(error){

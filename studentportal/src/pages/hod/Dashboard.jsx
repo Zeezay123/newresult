@@ -81,7 +81,7 @@ const Dashboard = () => {
              }));
         
   
-             return navigate('/');
+             return navigate('/redirect');
           }
   
         }catch(error){

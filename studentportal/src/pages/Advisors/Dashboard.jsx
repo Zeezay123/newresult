@@ -52,7 +52,7 @@ const Dashboard = () => {
           id: data.id,
           email: data.email,
         }));
-        return navigate('/');
+        return navigate('/redirect');
       }
     } catch (error) {
       dispatch(signInFailure(error.message || "Couldn't switch dashboard"));
@@ -82,7 +82,7 @@ const Dashboard = () => {
           id: data.id,
           email: data.email,
         }));
-        return navigate('/');
+        return navigate('/redirect');
       }
     } catch (error) {
       dispatch(signInFailure(error.message || "Couldn't switch dashboard"));

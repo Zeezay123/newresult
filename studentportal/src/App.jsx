@@ -57,16 +57,17 @@ import DeanStudentReport from './pages/dean/StudentReport.jsx'
 
 function App() {
   return (
-  <BrowserRouter basename="/result">
+  <BrowserRouter basename="/">
    <Routes>
     {/* <Route path="/" element={<Signup/>} /> */}
       {/* Public Routes */}
+      <Route path="/" element={<Login />} />
       <Route path="/login" element={<Login />} />
       <Route path="/student-login" element={<StudentLogin />} />
       <Route path="/staff-login" element={<StaffLogin/>} />
       <Route path="/signout" element={<Signout/>} />
       {/* Default Route - Redirect based on role */}
-      <Route path="/" element={<RoleBasedRedirect />} />
+      <Route path="/redirect" element={<RoleBasedRedirect />} />
 
       {/* HOD Routes - Only accessible by HOD */}
       <Route element={<RoleRoute allowedRoles={['Admin']} />}>

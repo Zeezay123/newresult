@@ -7,7 +7,7 @@ import flowbiteReact from "flowbite-react/plugin/vite";
 // https://vite.dev/config/
 export default defineConfig({
 
-  base:"/result/",
+  base:"/",
   server: {
     // This is the port your backend server is running on
     
@@ -15,7 +15,7 @@ export default defineConfig({
       // This will proxy requests from /api in the backend server
       // target is changed to match the backend server's URL
       '/api': {
-        target: 'http://localhost:3000',
+        target: 'http://localhost:5000',
         secure: false,
       }
     }
