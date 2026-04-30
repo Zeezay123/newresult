@@ -36,7 +36,11 @@ export const downloadResultTemplate = async (req, res, next) => {
     const activeSessionResult = await pool.request().query(`
             SELECT  SessionID , SessionName 
             FROM dbo.sessions 
+<<<<<<< HEAD
             WHERE isActive = '1'
+=======
+            WHERE isActive = 1
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
          `);
 
     if (activeSessionResult.recordset.length === 0) {
@@ -90,7 +94,11 @@ export const downloadResultTemplate = async (req, res, next) => {
                     sem.SemesterName,
                     d.DepartmentName,
                     l.LevelName
+<<<<<<< HEAD
                 FROM dbo.registrated_courses  cr
+=======
+                FROM dbo.course_registrations cr
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
                 INNER JOIN dbo.Student s ON cr.mat_no = s.MatNo
                 INNER JOIN dbo.courses c ON c.course_id = @CourseID
                 LEFT JOIN dbo.sessions ses ON cr.session = ses.SessionID
@@ -99,8 +107,13 @@ export const downloadResultTemplate = async (req, res, next) => {
                 LEFT JOIN dbo.levels l ON s.LevelID = l.LevelID
                 WHERE EXISTS (
                     SELECT 1
+<<<<<<< HEAD
                     FROM dbo.registrated_courses rc
                     WHERE rc.CourseID = @CourseID
+=======
+                    FROM STRING_SPLIT(CAST(ISNULL(cr.courses, '') AS NVARCHAR(MAX)), ',') AS registeredCourse
+                    WHERE TRY_CAST(LTRIM(RTRIM(registeredCourse.value)) AS INT) = @CourseID
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
                 )
                     AND  c.semester = @SemesterID
                     AND cr.session = @SessionID
@@ -443,7 +456,11 @@ export const uploadResults = async (req, res, next) => {
     const activeSessionResult = await pool.request().query(`
             SELECT  SessionID , SessionName 
             FROM dbo.sessions 
+<<<<<<< HEAD
             WHERE isActive = '1'
+=======
+            WHERE isActive = 1
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
          `);
 
     if (activeSessionResult.recordset.length === 0) {
@@ -733,7 +750,11 @@ export const getUploadedResults = async (req, res, next) => {
     const activeSessionResult = await pool.request().query(`
             SELECT  SessionID , SessionName 
             FROM dbo.sessions 
+<<<<<<< HEAD
             WHERE isActive = '1'
+=======
+            WHERE isActive = 1
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
          `);
 
     if (activeSessionResult.recordset.length === 0) {
@@ -951,7 +972,11 @@ export const submitResultsToHOD = async (req, res, next) => {
     const activeSessionResult = await pool.request().query(`
             SELECT  SessionID , SessionName 
             FROM dbo.sessions 
+<<<<<<< HEAD
             WHERE isActive = '1'
+=======
+            WHERE isActive = 1
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
          `);
 
     if (activeSessionResult.recordset.length === 0) {
@@ -1111,7 +1136,11 @@ export const ManualResultUpload = async (req, res, next) => {
         const activeSessionResult = await pool.request().query(`
             SELECT  SessionID , SessionName 
             FROM dbo.sessions 
+<<<<<<< HEAD
             WHERE isActive = '1'
+=======
+            WHERE isActive = 1
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
          `);
 
         if (activeSessionResult.recordset.length === 0) {
@@ -1415,7 +1444,11 @@ console.log("CourseID:", courseId, "ResultType:", resultType, "DepartmentID:", d
     const activeSessionResult = await pool.request().query(`
             SELECT  SessionID , SessionName 
             FROM dbo.sessions 
+<<<<<<< HEAD
             WHERE isActive = '1'
+=======
+            WHERE isActive = 1
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
          `);
 
     if (activeSessionResult.recordset.length === 0) {

@@ -15,6 +15,7 @@ const dbConfig = {
     password: process.env.DB_PASSWORD,
     port: parseInt(process.env.DB_PORT),   
     options: {
+<<<<<<< HEAD
         trustServerCertificate:true,
         encrypt:false, // For local development
         enableArithAbort: true
@@ -43,11 +44,22 @@ const dbconfigTwo ={
 
 
 
+=======
+        trustServerCertificate:false,
+        encrypt:false, // For local development
+        enableArithAbort: true
+    },
+    connectionTimeout: 30000, // 30 seconds
+    requestTimeout: 30000 // 30 seconds
+};
+
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
 const poolPromise = new sql.ConnectionPool(dbConfig)
     .connect()
     .then(pool => {
         console.log('Connected to Database');
         return pool;
+<<<<<<< HEAD
      })
     .catch(err => { 
         console.log('Database Connection Failed! Bad Config: ', err)
@@ -67,3 +79,16 @@ const poolPromiseTwo = new sql.ConnectionPool(dbconfigTwo)
     });
 
 export { sql, poolPromise, poolPromiseTwo };
+=======
+    
+     })
+
+
+    .catch(err => { 
+        console.log('Database Connection Failed! Bad Config: ', err)
+        // Return null instead of throwing to allow server to start
+        return null;
+    });
+
+export { sql, poolPromise };
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938

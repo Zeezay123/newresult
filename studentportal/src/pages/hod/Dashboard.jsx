@@ -27,11 +27,19 @@ const Dashboard = () => {
 
   const fetchRoles = async () => {
     try {
+<<<<<<< HEAD
     //   const response = await fetch('/api/hod/roles/getroles', {credentials: 'include'});
     //   const data = await response.json();
     //  setIsHod(data.isHod);
     //  setIsLecturer(data.isLecturer);
     //  setAdvisor(data.isAdvisor);
+=======
+      const response = await fetch('/api/hod/roles/getroles', {credentials: 'include'});
+      const data = await response.json();
+     setIsHod(data.isHod);
+     setIsLecturer(data.isLecturer);
+     setAdvisor(data.isAdvisor);
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
 
     } catch (error) {
       console.error('Error fetching roles:', error);
@@ -40,8 +48,13 @@ const Dashboard = () => {
 
   const goToAdvisorDash = async (selected ) => {
   
+<<<<<<< HEAD
     // const url = selected === 'lecturer' ? `/api/auth/login` : `/api/auth/login`;
     // const role = selected === 'lecturer' ? 'Lecturer' : 'Advisor';
+=======
+    const url = selected === 'lecturer' ? `/api/auth/login` : `/api/auth/login`;
+    const role = selected === 'lecturer' ? 'Lecturer' : 'Advisor';
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
    try{
   
     dispatch(signInStart());

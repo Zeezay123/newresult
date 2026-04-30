@@ -22,7 +22,11 @@ export const getPendingResults = async (req, res, next) => {
 
 // Get active session and semester
     const activeSessionResult = await pool.request()
+<<<<<<< HEAD
       .query(`SELECT SessionID FROM dbo.sessions WHERE isActive = '1'`);
+=======
+      .query(`SELECT SessionID FROM dbo.sessions WHERE isActive = 1`);
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
     
     if(activeSessionResult.recordset.length === 0){
       return next(errorHandler(404, "No active session found"))
@@ -89,7 +93,11 @@ export const getApprovedResults = async (req, res, next) => {
      
            // Get active session and semester
     const activeSessionResult = await pool.request()
+<<<<<<< HEAD
       .query(`SELECT SessionID FROM dbo.sessions WHERE isActive = '1'`);
+=======
+      .query(`SELECT SessionID FROM dbo.sessions WHERE isActive = 1`);
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
     
     if(activeSessionResult.recordset.length === 0){
       return next(errorHandler(404, "No active session found"))
@@ -154,7 +162,11 @@ export const getStudentStats = async (req, res, next) => {
     
    // Get active session and semester
     const activeSessionResult = await pool.request()
+<<<<<<< HEAD
       .query(`SELECT SessionID FROM dbo.sessions WHERE isActive = '1'`);
+=======
+      .query(`SELECT SessionID FROM dbo.sessions WHERE isActive = 1`);
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
     
     if(activeSessionResult.recordset.length === 0){
       return next(errorHandler(404, "No active session found"))

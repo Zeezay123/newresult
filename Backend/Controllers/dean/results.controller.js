@@ -4,7 +4,11 @@ import { errorHandler } from '../../utils/error.js';
 
 const getActiveSessionAndSemester = async (pool) => {
     const activeSessionResult = await pool.request()
+<<<<<<< HEAD
         .query(`SELECT SessionID, SessionName FROM dbo.sessions WHERE isActive = '1'`);
+=======
+        .query(`SELECT SessionID, SessionName FROM dbo.sessions WHERE isActive = 1`);
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
 
     if (activeSessionResult.recordset.length === 0) {
         throw errorHandler(404, 'No active session found');
@@ -258,9 +262,16 @@ const queryDeanCarryovers = async (pool, { facultyid, departmentID, programmeID,
             )
             AND EXISTS (
                 SELECT 1
+<<<<<<< HEAD
                 FROM dbo.registration_courses cr
                 INNER JOIN dbo.courses c2 ON c2.course_id = cr.course_id
                 WHERE cr.mat_no = s.MatNo
+=======
+                FROM dbo.course_registrations cr
+                CROSS APPLY STRING_SPLIT(COALESCE(CONVERT(NVARCHAR(MAX), cr.courses), ''), ',') reg
+                WHERE cr.mat_no = s.MatNo
+                  AND TRY_CAST(LTRIM(RTRIM(reg.value)) AS INT) = c.course_id
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
                   AND cr.session = @SessionID
             )
         ORDER BY r.MatricNo, c.course_code
@@ -288,9 +299,16 @@ const queryDeanCarryovers = async (pool, { facultyid, departmentID, programmeID,
             AND s.Department = @DepartmentID
             AND NOT EXISTS (
                 SELECT 1
+<<<<<<< HEAD
                 FROM dbo.registrated_courses cr
                 inner join dbo.courses c2 ON c2.course_id = cr.course_id 
                 WHERE cr.mat_no = s.MatNo
+=======
+                FROM dbo.course_registrations cr
+                CROSS APPLY STRING_SPLIT(COALESCE(CONVERT(NVARCHAR(MAX), cr.courses), ''), ',') reg
+                WHERE cr.mat_no = s.MatNo
+                  AND TRY_CAST(LTRIM(RTRIM(reg.value)) AS INT) = c.course_id
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
                   AND cr.session <= @SessionID
             )
         ORDER BY s.MatNo, c.course_code
@@ -379,6 +397,7 @@ export const getDeanDashboardStats = async (req, res, next) => {
         const courseStatsQuery = `
             WITH RegisteredCourses AS (
                 SELECT DISTINCT
+<<<<<<< HEAD
                     cr.course_id AS CourseID
                 FROM dbo.registrated_courses cr
                 INNER JOIN dbo.student s ON cr.mat_no = s.MatNo
@@ -386,6 +405,17 @@ export const getDeanDashboardStats = async (req, res, next) => {
                 WHERE s.faculty = @FacultyID
                   AND cr.session = @SessionID
                   AND c.semester = @SemesterID
+=======
+                    TRY_CAST(LTRIM(RTRIM(registeredCourse.value)) AS INT) AS CourseID
+                FROM dbo.course_registrations cr
+                INNER JOIN dbo.student s ON cr.mat_no = s.MatNo
+                CROSS APPLY STRING_SPLIT(CAST(ISNULL(cr.courses, '') AS NVARCHAR(MAX)), ',') AS registeredCourse
+                INNER JOIN dbo.courses c ON c.course_id = TRY_CAST(LTRIM(RTRIM(registeredCourse.value)) AS INT)
+                WHERE s.faculty = @FacultyID
+                  AND cr.session = @SessionID
+                  AND c.semester = @SemesterID
+                  AND TRY_CAST(LTRIM(RTRIM(registeredCourse.value)) AS INT) IS NOT NULL
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
             ),
             CourseSubmissionStatus AS (
                 SELECT

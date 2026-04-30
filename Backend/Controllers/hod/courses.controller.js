@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import {sql, poolPromise, poolPromiseTwo} from '../../db.js'
+=======
+import {sql, poolPromise} from '../../db.js'
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
 import { errorHandler } from '../../utils/error.js'
  
 
@@ -28,7 +32,11 @@ import { errorHandler } from '../../utils/error.js'
 //         .query(`
 //           SELECT SessionID, SessionName 
 //           FROM dbo.sessions 
+<<<<<<< HEAD
 //           WHERE isActive = '1'
+=======
+//           WHERE isActive = 1
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
 //         `);
 
 //       if(activeSessionResult.recordset.length === 0){
@@ -41,7 +49,11 @@ import { errorHandler } from '../../utils/error.js'
 //         .query(`
 //           SELECT SemesterID, SemesterName 
 //           FROM dbo.semesters 
+<<<<<<< HEAD
 //           WHERE isActive = '1'
+=======
+//           WHERE isActive = 1
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
 //         `);
 
 //       if(activeSemesterResult.recordset.length === 0){
@@ -218,14 +230,20 @@ export const getCourses = async (req, res, next) => {
     try {
       
         const pool = await poolPromise;
+<<<<<<< HEAD
         const poolTwo = await poolPromiseTwo;
+=======
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
         
         if(!pool){
             return next(errorHandler(500, "Database connection failed"))
         }
+<<<<<<< HEAD
         if(!poolTwo){
             return next(errorHandler(500, "Database connection to Pool Two failed"))
         }
+=======
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
 
 // get active semester
 
@@ -246,11 +264,19 @@ export const getCourses = async (req, res, next) => {
     const query =  ` SELECT
     c.course_id,
     c.course_code,
+<<<<<<< HEAD
     cal.discipline,
     c.course_title,
     c.credit_unit,
     c.course_type,
     cal.programme_id,
+=======
+    c.discipline,
+    c.course_title,
+    c.credit_unit,
+    c.course_type,
+    c.programme_id,
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
     ca.AssignmentID,
     ca.DisciplineID,
     ca.TeachingDepartmentID,
@@ -262,15 +288,31 @@ export const getCourses = async (req, res, next) => {
     l.LevelName,
     CONCAT(s.LastName, ' ', s.OtherNames) AS AssignedLecturer
 FROM dbo.courses c
+<<<<<<< HEAD
 INNER JOIN dbo.course_allocations cal ON cal.course_id = c.course_id
 LEFT JOIN dbo.course_assignment ca ON ca.CourseID = c.course_id
 LEFT JOIN dbo.Levels l ON cal.level_id = l.LevelID
 LEFT JOIN delsu.dbo.tblStaffDirectory s ON ca.LecturerID = s.StaffId
+=======
+LEFT JOIN dbo.course_assignment ca ON ca.CourseID = c.course_id
+LEFT JOIN dbo.Levels l ON c.level_id = l.LevelID
+LEFT JOIN dbo.tblStaffDirectory s ON ca.LecturerID = s.StaffId
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
 LEFT JOIN dbo.AppDepartment d ON d.DepartmentID = @hodDept
 WHERE  
 c.semester = @semesterID
 AND
+<<<<<<< HEAD
 cal.department = @hodDept `
+=======
+EXISTS (
+    SELECT 1
+    FROM STRING_SPLIT(c.Discipline, ',') AS courseDiscipline
+    INNER JOIN dbo.Disciplines dis
+      ON dis.DisciplineID = TRY_CAST(LTRIM(RTRIM(courseDiscipline.value)) AS INT)
+    WHERE dis.DepartmentID = @hodDept 
+)`
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
 
         const result = await pool.request()
         .input('hodDept', sql.Int, hodDepartmentID)
@@ -287,7 +329,11 @@ cal.department = @hodDept `
         count:result.recordset.length
        })
 
+<<<<<<< HEAD
     } catch (error) { 
+=======
+    } catch (error) {
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
       console.error('Error fetching courses:', error.stack);
        return next(errorHandler(500, "Server Error: " + error.message))
     }
@@ -312,7 +358,11 @@ export const getCourseStats = async (req, res, next) => {
             .query(`
                 SELECT SessionID, SessionName 
                 FROM dbo.sessions 
+<<<<<<< HEAD
                 WHERE isActive = '1'
+=======
+                WHERE isActive = 1
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
             `);
 
         if(activeSessionResult.recordset.length === 0){
@@ -335,6 +385,7 @@ export const getCourseStats = async (req, res, next) => {
         const semesterID = activeSemesterResult.recordset[0].SemesterID;
     
         // A course is fully assigned only when every discipline (in HOD's department) has a lecturer assignment.
+<<<<<<< HEAD
         // const query = `
         //     WITH CourseDepartmentDisciplines AS (
         //         SELECT DISTINCT
@@ -392,6 +443,63 @@ export const getCourseStats = async (req, res, next) => {
 
         //     and  cal.semester = @semesterID
         //     AND   ca.SessionID = @sessionID
+=======
+        const query = `
+            WITH CourseDepartmentDisciplines AS (
+                SELECT DISTINCT
+                    c.course_id,
+                    d.DisciplineID
+                FROM dbo.courses c
+                CROSS APPLY STRING_SPLIT(c.Discipline, ',') AS courseDiscipline
+                INNER JOIN dbo.Disciplines d
+                    ON d.DisciplineID = TRY_CAST(LTRIM(RTRIM(courseDiscipline.value)) AS INT)
+                WHERE c.semester = @semesterID
+                  AND d.DepartmentID = @hodDept
+            ),
+            CourseStatus AS (
+                SELECT
+                    cdd.course_id,
+                    CASE
+                        WHEN EXISTS (
+                            SELECT 1
+                            FROM CourseDepartmentDisciplines x
+                            WHERE x.course_id = cdd.course_id
+                              AND NOT EXISTS (
+                                  SELECT 1
+                                  FROM dbo.course_assignment ca
+                                  WHERE ca.CourseID = x.course_id
+                                    AND ca.DisciplineID = x.DisciplineID
+                                    AND ca.SessionID = @sessionID
+                                    AND ca.SemesterID = @semesterID
+                                    AND ca.LecturerID IS NOT NULL
+                              )
+                        ) THEN 1 ELSE 0
+                    END AS HasUnassignedDiscipline
+                FROM CourseDepartmentDisciplines cdd
+                GROUP BY cdd.course_id
+            )
+            SELECT
+                COUNT(*) AS TotalCourses,
+                SUM(CASE WHEN HasUnassignedDiscipline = 0 THEN 1 ELSE 0 END) AS AssignedCourses,
+                SUM(CASE WHEN HasUnassignedDiscipline = 1 THEN 1 ELSE 0 END) AS UnassignedCourses
+            FROM CourseStatus
+        `;
+
+        const queryTwo =`
+           SELECT COUNT(DISTINCT c.course_id) AS TotalCourses,
+            SUM(CASE WHEN ca.LecturerID IS NOT NULL THEN 1 ELSE 0 END) AS AssignedCourses,
+            SUM(CASE WHEN ca.LecturerID IS NULL THEN 1 ELSE 0 END) AS UnassignedCourses
+        FROM dbo.courses c
+        INNER JOIN dbo.course_assignment ca ON ca.CourseID = c.course_id
+        CROSS APPLY STRING_SPLIT(ISNULL(c.discipline, ''), ',') AS courseDiscipline
+        INNER JOIN dbo.Disciplines d ON d.DisciplineID = TRY_CAST(LTRIM(RTRIM(courseDiscipline.value)) AS INT)
+        where d.DepartmentID = @hodDept
+
+            and  c.semester = @semesterID
+            AND   ca.SessionID = @sessionID
+                 
+        `
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
 
         const result = await pool.request()
             .input('hodDept', sql.Int, hodDepartmentID)
@@ -447,7 +555,11 @@ export const unassignedCourses = async (req, res, next) => {
          .query(`
             SELECT  SessionID , SessionName 
             FROM dbo.sessions 
+<<<<<<< HEAD
             WHERE isActive = '1'
+=======
+            WHERE isActive = 1
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
          `);
 
          if(activeSessionResult.recordset.length === 0){
@@ -478,11 +590,16 @@ export const unassignedCourses = async (req, res, next) => {
         // Return courses that still have at least one discipline (within HOD's department)
         // without an assigned lecturer for the current session/semester.
         let query = `SELECT
+<<<<<<< HEAD
            cal.course_id,
+=======
+           c.course_id,
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
            c.course_code,
            c.course_title,
            c.credit_unit,
            c.course_type,
+<<<<<<< HEAD
            cal.discipline,
            cal.programme_id,
            cal.semester,
@@ -496,15 +613,38 @@ export const unassignedCourses = async (req, res, next) => {
          AND cal.level_id = @LevelID
          AND d.DepartmentID = @hodDept
          AND NOT EXISTS (
+=======
+           c.discipline,
+           c.programme_id,
+           c.semester,
+           l.LevelName
+         FROM dbo.courses c
+         LEFT JOIN dbo.levels l ON c.level_id = l.LevelID
+         WHERE c.semester = @semesterID
+         AND c.level_id = @LevelID
+                 AND EXISTS (
+                        SELECT 1
+                        FROM STRING_SPLIT(c.Discipline, ',') AS courseDiscipline
+                        INNER JOIN dbo.Disciplines d
+                            ON d.DisciplineID = TRY_CAST(LTRIM(RTRIM(courseDiscipline.value)) AS INT)
+                        WHERE d.DepartmentID = @hodDept
+                            AND NOT EXISTS (
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
                                 SELECT 1
                                 FROM dbo.course_assignment ca
                                 WHERE ca.CourseID = c.course_id
                                     AND ca.DisciplineID = d.DisciplineID
                                     AND ca.SessionID = @sessionID
                                     AND ca.SemesterID = @semesterID
+<<<<<<< HEAD
                                     AND ca.LecturerID IS NOT NULL            
                  )
 
+=======
+                                    AND ca.LecturerID IS NOT NULL
+                            )
+                 )
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
          ORDER BY c.course_code`;
 
         const request = pool.request()
@@ -546,7 +686,11 @@ export const getCourseDepartments = async (req, res, next)=>{
         // Get course disciplines
         const coursepool = await pool.request()
         .input('courseID', sql.Int, parseInt(courseID))
+<<<<<<< HEAD
         .query(`SELECT discipline FROM dbo.course_allocations cal WHERE  cal.course_id = @courseID`);
+=======
+        .query(`SELECT discipline FROM dbo.courses WHERE  course_id = @courseID`);
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
 
         if(coursepool.recordset.length === 0){
             return next(errorHandler(404, "Course not found"));
@@ -557,9 +701,18 @@ export const getCourseDepartments = async (req, res, next)=>{
           SELECT DISTINCT d.DepartmentID, d.DepartmentName 
           FROM dbo.appdepartment d
           INNER JOIN dbo.Disciplines disc ON d.DepartmentID = disc.DepartmentID
+<<<<<<< HEAD
           INNER JOIN dbo.course_allocations cal ON cal.course_id = @courseID
           WHERE 
             cal.discipline = disc.DisciplineID
+=======
+          INNER JOIN dbo.courses c ON c.course_id = @courseID
+          WHERE EXISTS (
+            SELECT 1 
+                        FROM STRING_SPLIT(CAST(ISNULL(c.discipline, '') AS NVARCHAR(MAX)), ',') AS courseDiscipline
+            WHERE CAST(TRIM(courseDiscipline.value) AS INT) = disc.DisciplineID
+          )
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
         `;
        
         const request = pool.request()
@@ -590,11 +743,20 @@ try{
   }
 
   const query = `
+<<<<<<< HEAD
         SELECT DISTINCT d.DisciplineID, d.Name, cal.course_id
         FROM dbo.course_allocations cal
         INNER JOIN dbo.Disciplines d
             ON cal.discipline = d.DisciplineID
         WHERE cal.course_id = @CourseID
+=======
+        SELECT DISTINCT d.DisciplineID, d.Name, c.course_id
+        FROM dbo.courses c
+        CROSS APPLY STRING_SPLIT(CAST(ISNULL(c.discipline, '') AS NVARCHAR(MAX)), ',') AS sd
+        INNER JOIN dbo.Disciplines d
+            ON d.DisciplineID = TRY_CAST(LTRIM(RTRIM(sd.value)) AS INT)
+        WHERE c.course_id = @CourseID
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
             AND d.DepartmentID = @departmentID
   `
 

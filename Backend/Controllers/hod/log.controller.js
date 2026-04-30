@@ -7,11 +7,17 @@ const userId = req.user.id;
 const hodID = req.user.departmentID;
 
 console.log("Fetching result log for HOD ID:", hodID, "User ID:", userId);
+<<<<<<< HEAD
 console.log(typeof hodID, typeof userId);
 try{
 
     const pool = await poolPromise;
  
+=======
+try{
+
+    const pool = await poolPromise;
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
 
     if(!pool){
         return res.status(500).json({ success: false, message: "Database connection failed" });
@@ -22,7 +28,11 @@ try{
             .query(`
                 SELECT SessionID, SessionName 
                 FROM dbo.sessions 
+<<<<<<< HEAD
                 WHERE isActive = '1'
+=======
+                WHERE isActive = 1
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
             `);
 
         if(activeSessionResult.recordset.length === 0){
@@ -49,9 +59,23 @@ try{
             .input('sessionID', sql.Int, sessionID)
             .input('semesterID', sql.Int, semesterID)
             .query(`
+<<<<<<< HEAD
                 Select distinct  r.SubmittedDate, r.SubmittedBy
                 from dbo.results r
             
+=======
+                Select distinct  r.SubmittedDate, r.SubmittedBy, co.course_code, co.course_title,c.course_id
+                from dbo.results r
+                INNER JOIN dbo.course_allocations c ON c.course_id = r.CourseID 
+                INNER JOIN dbo.courses co ON co.course_id = c.course_id
+                where r.SessionID = @sessionID
+                and r.SemesterID = @semesterID
+                and c.department = @hodID
+
+                group by r.SubmittedDate, r.SubmittedBy, co.course_code, co.course_title,c.course_id
+                order by r.SubmittedDate desc
+              
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
                 
                 `)
 
@@ -60,6 +84,7 @@ try{
             }
 
             return res.status(200).json({ success: true, log: result.recordset })
+<<<<<<< HEAD
 //, co.course_code, co.course_title,c.course_id
     // INNER JOIN dbo.course_allocations c ON c.course_id = r.CourseID 
                 // INNER JOIN dbo.courses co ON co.course_id = c.course_id
@@ -72,6 +97,12 @@ try{
               
 } catch(err){
     console.error("Error fetching result log:", err.stack)
+=======
+
+
+} catch(err){
+    console.error("Error fetching result log:", err);
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
     return res.status(500).json({ success: false, message: "An error occurred while fetching result log" })
 }
 }

@@ -10,9 +10,15 @@ const router = express.Router();
 // Define your auth routes here
  
 // Login route - no authentication required
+<<<<<<< HEAD
 // router.post('/login', Signin)
 router.get('/signout', signOut)
 router.post('/staff-login', Signin)
+=======
+router.post('/login', Signin)
+router.get('/signout', signOut)
+router.post('/staff-login', staffSignin)
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
 
 // Protected routes (use VerifyUser middleware for routes that need authentication)
 // Example: router.get('/profile', VerifyUser, getProfile)

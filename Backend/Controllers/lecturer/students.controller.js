@@ -21,7 +21,11 @@ export const getStudents = async(req, res, next) => {
          .query(`
             SELECT  SessionID , SessionName 
             FROM dbo.sessions 
+<<<<<<< HEAD
             WHERE isActive = '1'
+=======
+            WHERE isActive = 1
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
          `);
 
          if(activeSessionResult.recordset.length === 0){
@@ -58,13 +62,26 @@ export const getStudents = async(req, res, next) => {
         .query(`
             SELECT 
                 cr.mat_no
+<<<<<<< HEAD
             FROM dbo.registrated_courses cr
            INNER JOIN dbo.course_assignment ca ON cr.course_id = ca.CourseID
+=======
+            FROM dbo.course_registrations cr
+            WHERE EXISTS (
+                SELECT 1
+                FROM STRING_SPLIT(CAST(ISNULL(cr.courses, '') AS NVARCHAR(MAX)), ',') AS registeredCourse
+                INNER JOIN dbo.course_assignment ca
+                    ON ca.CourseID = TRY_CAST(LTRIM(RTRIM(registeredCourse.value)) AS INT)
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
                 WHERE ca.LecturerID = @StaffCode
                 AND ca.SessionID = @SessionID
                 AND ca.SemesterID = @SemesterID
 
+<<<<<<< HEAD
             
+=======
+            )
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
             ORDER BY cr.mat_no
             `)
     

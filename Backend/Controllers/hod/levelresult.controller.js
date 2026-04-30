@@ -30,7 +30,11 @@ try{
             .query(`
                 SELECT SessionID, SessionName 
                 FROM dbo.sessions 
+<<<<<<< HEAD
                 WHERE isActive = '1'
+=======
+                WHERE isActive = 1
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
             `);
 
         if(activeSessionResult.recordset.length === 0){
@@ -162,7 +166,11 @@ export const getAvailableProgrammesAndLevels = async (req, res, next) => {
             .query(`
                 SELECT SessionID, SessionName 
                 FROM dbo.sessions 
+<<<<<<< HEAD
                 WHERE isActive = '1'
+=======
+                WHERE isActive = 1
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
             `);
 
         if(activeSessionResult.recordset.length === 0){
@@ -283,7 +291,11 @@ export const downloadLevelResults = async (req, res, next) => {
   
           // Get active session and semester
           const activeSessionResult = await pool.request()
+<<<<<<< HEAD
               .query(`SELECT SessionID, SessionName FROM dbo.sessions WHERE isActive = '1'`);
+=======
+              .query(`SELECT SessionID, SessionName FROM dbo.sessions WHERE isActive = 1`);
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
   
           if (activeSessionResult.recordset.length === 0) {
               return next(errorHandler(404, "No active session found"))
@@ -761,7 +773,11 @@ export const approveLevelResults = async (req, res, next) => {
 
         // Get the active session
         const activeSessionResult = await pool.request()
+<<<<<<< HEAD
             .query(`SELECT SessionID FROM dbo.sessions WHERE isActive = '1'`);
+=======
+            .query(`SELECT SessionID FROM dbo.sessions WHERE isActive = 1`);
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
 
         if (activeSessionResult.recordset.length === 0) {
             return next(errorHandler(404, "No active session found"))
@@ -870,7 +886,11 @@ export const rejectLevelResults = async (req, res, next) => {
 
         // Get the active session
         const activeSessionResult = await pool.request()
+<<<<<<< HEAD
             .query(`SELECT SessionID FROM dbo.sessions WHERE isActive = '1'`);
+=======
+            .query(`SELECT SessionID FROM dbo.sessions WHERE isActive = 1`);
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
 
         if (activeSessionResult.recordset.length === 0) {
             return next(errorHandler(404, "No active session found"))
@@ -978,7 +998,11 @@ export const getPreviousCumulativeResults = async (req, res, next) => {
 
         // Get active session and semester
         const activeSessionResult = await pool.request()
+<<<<<<< HEAD
             .query(`SELECT SessionID, SessionName FROM dbo.sessions WHERE isActive = '1'`);
+=======
+            .query(`SELECT SessionID, SessionName FROM dbo.sessions WHERE isActive = 1`);
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
 
         if(activeSessionResult.recordset.length === 0){
             return next(errorHandler(404, "No active session found"))
@@ -1073,7 +1097,11 @@ export const getCurrentSemesterCourses = async (req, res, next) => {
 
         // Get active session and semester
         const activeSessionResult = await pool.request()
+<<<<<<< HEAD
             .query(`SELECT SessionID, SessionName FROM dbo.sessions WHERE isActive = '1'`);
+=======
+            .query(`SELECT SessionID, SessionName FROM dbo.sessions WHERE isActive = 1`);
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
 
         if(activeSessionResult.recordset.length === 0){
             return next(errorHandler(404, "No active session found"))
@@ -1187,7 +1215,11 @@ export const getSemesterSummary = async (req, res, next) => {
 
         // Get active session and semester
         const activeSessionResult = await pool.request()
+<<<<<<< HEAD
             .query(`SELECT SessionID, SessionName FROM dbo.sessions WHERE isActive = '1'`);
+=======
+            .query(`SELECT SessionID, SessionName FROM dbo.sessions WHERE isActive = 1`);
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
 
         if(activeSessionResult.recordset.length === 0){
             return next(errorHandler(404, "No active session found"))
@@ -1291,7 +1323,11 @@ export const getPreviousSemesterCarryovers = async (req, res, next) => {
 
         // Get active session and semester
         const activeSessionResult = await pool.request()
+<<<<<<< HEAD
             .query(`SELECT SessionID, SessionName FROM dbo.sessions WHERE isActive = '1'`);
+=======
+            .query(`SELECT SessionID, SessionName FROM dbo.sessions WHERE isActive = 1`);
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
 
         if(activeSessionResult.recordset.length === 0){
             return next(errorHandler(404, "No active session found"))
@@ -1356,9 +1392,16 @@ export const getPreviousSemesterCarryovers = async (req, res, next) => {
                 )
                 AND EXISTS (
                     SELECT 1
+<<<<<<< HEAD
                     FROM dbo.registrated_courses cr
                     INNER JOIN dbo.courses c2 ON c2.course_id = cr.course_id
                     WHERE cr.mat_no = s.MatNo
+=======
+                    FROM dbo.course_registrations cr
+                    CROSS APPLY STRING_SPLIT(COALESCE(CONVERT(NVARCHAR(MAX), cr.courses), ''), ',') reg
+                    WHERE cr.mat_no = s.MatNo
+                      AND TRY_CAST(LTRIM(RTRIM(reg.value)) AS INT) = c.course_id
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
                       AND cr.session = @ActiveSessionID
                 )
             ORDER BY r.MatricNo, c.course_code
@@ -1384,18 +1427,31 @@ export const getPreviousSemesterCarryovers = async (req, res, next) => {
                 c.course_code,
                 'Missed' AS CourseStatus
             FROM dbo.student s
+<<<<<<< HEAD
             inner join dbo.course_allocations cal ON cal.level_id <= @LevelID
             INNER JOIN dbo.courses c ON
                 c.course_type = 'C'
+=======
+            INNER JOIN dbo.courses c ON
+                c.course_type = 'C'
+                AND c.level_id <= @LevelID
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
                 AND c.semester = @PreviousSemesterID
             WHERE s.LevelID = @LevelID
                 AND s.ProgrammeID = @ProgrammeID
                 AND s.Department = @DepartmentID
                 AND NOT EXISTS (
                     SELECT 1
+<<<<<<< HEAD
                     FROM dbo.registrated_courses cr
                     INNER JOIN dbo.courses c2 ON c2.course_id = cr.course_id
                     WHERE cr.mat_no = s.MatNo
+=======
+                    FROM dbo.course_registrations cr
+                    CROSS APPLY STRING_SPLIT(COALESCE(CONVERT(NVARCHAR(MAX), cr.courses), ''), ',') reg
+                    WHERE cr.mat_no = s.MatNo
+                      AND TRY_CAST(LTRIM(RTRIM(reg.value)) AS INT) = c.course_id
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
                       AND cr.session <= @ActiveSessionID
                 )
             ORDER BY s.MatNo, c.course_code

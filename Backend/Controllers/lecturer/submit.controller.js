@@ -26,7 +26,11 @@ export const submittedCourses = async(req, res, next) => {
          .query(`
             SELECT  SessionID , SessionName 
             FROM dbo.sessions 
+<<<<<<< HEAD
             WHERE isActive = '1'
+=======
+            WHERE isActive = 1
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
          `);
 
          if(activeSessionResult.recordset.length === 0){
@@ -108,10 +112,20 @@ export const submittedCourses = async(req, res, next) => {
                 AND ca.SemesterID = r.SemesterID
             OUTER APPLY (
                 SELECT COUNT(DISTINCT cr.mat_no) AS TotalStudents
+<<<<<<< HEAD
                 FROM dbo.registrated_courses cr
                 WHERE cr.session_id = r.SessionID
                     AND cr.course_id = r.CourseID
                     
+=======
+                FROM dbo.course_registrations cr
+                WHERE cr.session = r.SessionID
+                    AND EXISTS (
+                        SELECT 1
+                        FROM STRING_SPLIT(CAST(ISNULL(cr.courses, '') AS NVARCHAR(MAX)), ',') AS registeredCourse
+                        WHERE TRY_CAST(LTRIM(RTRIM(registeredCourse.value)) AS INT) = r.CourseID
+                    )
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
             ) reg
             WHERE r.SubmittedBy = @StaffCode
                 AND r.SessionID = @SessionID

@@ -79,7 +79,11 @@ export const getActiveSession = async (req, res, next) => {
                                 SessionName,
                                 isActive
                             FROM dbo.sessions
+<<<<<<< HEAD
                             WHERE isActive = '1'
+=======
+                            WHERE isActive = 1
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
                         `);
 
                     if (result.recordset.length === 0) {

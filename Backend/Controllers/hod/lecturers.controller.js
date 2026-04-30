@@ -1,32 +1,64 @@
+<<<<<<< HEAD
 
 import {sql, poolPromise, poolPromiseTwo} from '../../db.js'
+=======
+import { log } from 'node:console';
+import {sql, poolPromise} from '../../db.js'
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
 import { errorHandler } from '../../utils/error.js'
 
 
 // Get all lecturers in HOD's department
 export const getLecturers = async (req, res, next) => {
+<<<<<<< HEAD
     const hodDepartmentID = req.user?.departmentID; 
     const hodStaffCode = req.user?.id;
     const search = req.query.search || '';
     const orderBy = req.query.orderBy || '';
 
     console.log('HOD Department ID:', hodDepartmentID);
+=======
+    const hodDepartmentID = req.user?.departmentID; // HOD's department ID from auth
+    const hodStaffCode = req.user?.id;
+    const search = req.query.search || '';
+    const orderBy = req.query.orderBy || ''; // asc or desc for units
+
+    console.log('HOD Department ID:', hodDepartmentID);
+    console.log('User object:', req.user);
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
     console.log('HOD Staff Code:', hodStaffCode);
 
     try {
         const pool = await poolPromise;
+<<<<<<< HEAD
         const poolTwo = await poolPromiseTwo;
         
         if(!pool){
             return next(errorHandler(500, "Database connection failed"))
         }
+=======
+        
+
+
+
+        if(!pool){
+            return next(errorHandler(500, "Database connection failed"))
+        }
+
+
+
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
         
          //get the active session 
          const activeSessionResult = await pool.request()
          .query(`
             SELECT  SessionID , SessionName 
             FROM dbo.sessions 
+<<<<<<< HEAD
             WHERE isActive = '1'
+=======
+            WHERE isActive = 1
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
          `);
 
          if(activeSessionResult.recordset.length === 0){
@@ -35,6 +67,11 @@ export const getLecturers = async (req, res, next) => {
   
          const sessionID = activeSessionResult.recordset[0].SessionID;
         
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
          //get active semester
          const activeSemesterResult = await pool.request()
          .query(`
@@ -42,6 +79,10 @@ export const getLecturers = async (req, res, next) => {
             FROM dbo.semesters 
             WHERE isActive = 'true'
          `);
+<<<<<<< HEAD
+=======
+
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
         
          if(activeSemesterResult.recordset.length === 0){
             return next(errorHandler(404, "No active semester found"))
@@ -50,14 +91,21 @@ export const getLecturers = async (req, res, next) => {
          const semesterID = activeSemesterResult.recordset[0].SemesterID;
 
         // Get HOD's StaffID
+<<<<<<< HEAD
         const hodResult = await poolTwo.request()
+=======
+        const hodResult = await pool.request()
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
             .input('staffCode', sql.VarChar, hodStaffCode)
           
             .query('SELECT StaffId FROM dbo.tblStaffDirectory WHERE StaffId = @staffCode');
         
         const hodStaffID = hodResult.recordset.length > 0 ? hodResult.recordset[0].StaffId : null;
+<<<<<<< HEAD
          
         console.log('HOD Staff ID:', hodStaffID);
+=======
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
 
         let query = `
             SELECT 
@@ -79,8 +127,13 @@ export const getLecturers = async (req, res, next) => {
                 STRING_AGG(CAST(tp.ProgrammeName AS VARCHAR), ', ') AS TeachingProgrammeNames,
                 STRING_AGG(CAST(td.DepartmentName AS VARCHAR), ', ') AS TeachingDepartmentNames
                 
+<<<<<<< HEAD
             FROM delsu.dbo.tblStaffDirectory s
             LEFT JOIN dbo.appdepartment d ON s.departmentid = d.DepartmentID 
+=======
+            FROM dbo.tblStaffDirectory s
+            LEFT JOIN dbo.appdepartment d ON s.departmentid = d.DepartmentID
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
             LEFT JOIN dbo.course_assignment ca ON s.StaffId = ca.LecturerID
                 AND (
                     ca.AssignedBy = @hodStaffID  -- Show assignments made by this HOD
@@ -102,23 +155,31 @@ export const getLecturers = async (req, res, next) => {
             query += `AND s.DepartmentID = @departmentID`;
         }
 
+<<<<<<< HEAD
       
  // Search filter
 
 
 
+=======
+        // Search filter
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
         if (search) {
             query += ` AND (s.LastName LIKE @search OR s.OtherNames LIKE @search OR s.EmailAddress LIKE @search)`;
         }
 
         query += ` GROUP BY s.StaffID, s.LastName, s.OtherNames, s.EmailAddress, s.DepartmentID, d.DepartmentName, ca.SessionID, ca.SemesterID`;
 
+<<<<<<< HEAD
 
 
 
         // Order by courses assigned count
 
 
+=======
+        // Order by courses assigned count
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
         if (orderBy === 'asc') {
             query += ` ORDER BY TotalCoursesAssigned ASC`;
         } else if (orderBy === 'desc') {
@@ -143,7 +204,11 @@ export const getLecturers = async (req, res, next) => {
             request.input('search', sql.VarChar, `%${search}%`);
         }
 
+<<<<<<< HEAD
         // console.log('Executing query:', query);
+=======
+        console.log('Executing query:', query);
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
         const result = await request.query(query);
         
         console.log('Found lecturers:', result.recordset.length);
@@ -164,7 +229,11 @@ export const getLecturers = async (req, res, next) => {
 export const getLecturersCount = async (req, res, next) => {
     const hodDepartmentID = req.user?.departmentID;
     try {
+<<<<<<< HEAD
         const pool = await poolPromiseTwo; // Use second pool for lightweight queries
+=======
+        const pool = await poolPromise;
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
         if(!pool){
             return next(errorHandler(500, "Database connection failed"))
         }
@@ -227,7 +296,11 @@ export const assignCourse = async (req, res, next) => {
          .query(`
             SELECT  SessionID , SessionName 
             FROM dbo.sessions 
+<<<<<<< HEAD
             WHERE isActive = '1'
+=======
+            WHERE isActive = 1
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
          `);
 
          if(activeSessionResult.recordset.length === 0){

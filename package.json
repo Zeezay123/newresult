@@ -13,7 +13,11 @@
       "cookie-parser": "^1.4.7",
       "cors": "^2.8.5",
       "dotenv": "^17.2.3",
+<<<<<<< HEAD
       "exceljs": "^3.4.0",
+=======
+      "exceljs": "^4.4.0",
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
       "express": "^5.1.0",
       "jsonwebtoken": "^9.0.2",
       "mssql": "^12.2.0",

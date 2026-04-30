@@ -83,7 +83,11 @@ export const assignAdvisor = async (req, res, next) => {
         }
 
         const getSessionID = await pool.request()
+<<<<<<< HEAD
         .query(`SELECT SessionID from dbo.sessions WHERE isActive = '1'`)
+=======
+        .query(`SELECT SessionID from dbo.sessions WHERE isActive = 1`)
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
 
         if(getSessionID.recordset.length == 0){
             return next(errorHandler(404,'No Level Found'))

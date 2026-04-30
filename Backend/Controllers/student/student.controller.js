@@ -18,7 +18,11 @@ export const getAvailableSessions = async (req, res, next) => {
 
         // Get active session and semester
         const activeSessionResult = await pool.request()
+<<<<<<< HEAD
             .query(`SELECT SessionID, SessionName FROM dbo.sessions WHERE isActive = '1'`);
+=======
+            .query(`SELECT SessionID, SessionName FROM dbo.sessions WHERE isActive = 1`);
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
 
         const activeSemesterResult = await pool.request()
             .query(`SELECT SemesterID, SemesterName FROM dbo.semesters WHERE isActive = 'true'`);
@@ -82,7 +86,11 @@ export const getResults = async (req, res, next) => {
         // If no session/semester specified, get the active ones
         if (!sessionID || !semesterID) {
             const activeSessionResult = await pool.request()
+<<<<<<< HEAD
                 .query(`SELECT SessionID FROM dbo.sessions WHERE isActive = '1'`);
+=======
+                .query(`SELECT SessionID FROM dbo.sessions WHERE isActive = 1`);
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
 
             const activeSemesterResult = await pool.request()
                 .query(`SELECT SemesterID FROM dbo.semesters WHERE isActive = 'true'`);

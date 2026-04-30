@@ -20,7 +20,11 @@ export const getCourses = async (req, res, next) => {
             .query(`
                 SELECT SessionID, SessionName 
                 FROM dbo.sessions 
+<<<<<<< HEAD
                 WHERE isActive = '1'
+=======
+                WHERE isActive = 1
+>>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
             `);
 
         if(activeSessionResult.recordset.length === 0){
