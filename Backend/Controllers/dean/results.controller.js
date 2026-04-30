@@ -4,11 +4,7 @@ import { errorHandler } from '../../utils/error.js';
 
 const getActiveSessionAndSemester = async (pool) => {
     const activeSessionResult = await pool.request()
-<<<<<<< HEAD
         .query(`SELECT SessionID, SessionName FROM dbo.sessions WHERE isActive = '1'`);
-=======
-        .query(`SELECT SessionID, SessionName FROM dbo.sessions WHERE isActive = 1`);
->>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
 
     if (activeSessionResult.recordset.length === 0) {
         throw errorHandler(404, 'No active session found');
