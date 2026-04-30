@@ -1,9 +1,5 @@
 
-<<<<<<< HEAD
 import {sql, poolPromise, poolPromiseTwo} from '../db.js'
-=======
-import {sql, poolPromise} from '../db.js'
->>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
 import { errorHandler } from '../utils/error.js'
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
@@ -26,11 +22,7 @@ const authCookieOptions = {
 
 
 
-<<<<<<< HEAD
 export const Signinii = async (req, res, next) => {
-=======
-export const Signin = async (req, res, next) => {
->>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
 
     const {username} =req.body
 const type = process.env.NODE_ENV || 'development';
@@ -43,11 +35,7 @@ const type = process.env.NODE_ENV || 'development';
   try{
 
     const pool = await poolPromise
-<<<<<<< HEAD
     const poolTwo = await poolPromiseTwo
-=======
-   
->>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
 
 
 
@@ -55,17 +43,12 @@ const type = process.env.NODE_ENV || 'development';
         return next(errorHandler(500, "Database connection failed"))
     }
 
-<<<<<<< HEAD
     if(!poolTwo){
         return next(errorHandler(500, "Database connection to Pool Two failed"))
     }
 
     const query =` SELECT StaffId, departmentid, facultyid, Status from tblStaffDirectory WHERE StaffId = @StaffId`;
     const result = await poolTwo.request()
-=======
-    const query =` SELECT StaffId, departmentid, facultyid, Status from tblStaffDirectory WHERE StaffId = @StaffId`;
-    const result = await pool.request()
->>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
     .input('StaffId', sql.VarChar, username)
     .query(query)
 
@@ -128,7 +111,6 @@ const type = process.env.NODE_ENV || 'development';
     }
 
     const roles = roleResult.recordset.map(r => r.RoleName);
-<<<<<<< HEAD
     const roleName =roles.includes('Dean') ? 'Dean' : roles.includes('Admin') ? 'Admin' : roles.includes('Senate') ? 'Senate' : 'Staff';
     //generate jwt token 
    const token = jwt.sign(
@@ -157,11 +139,6 @@ const type = process.env.NODE_ENV || 'development';
             },
             token: token
         })
-=======
-    const roleName = roles.includes('Admin') ? 'Admin' : roles.includes('Advisor') ? 'Advisor' : roles.includes('Lecturer') ? 'Lecturer' : 'Staff';
-
-  
->>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
   } catch(error){
     console.error('Error during sign-in:', error.stack);    
     return next(errorHandler(500, "Server error"))
@@ -429,7 +406,6 @@ export const signOut = (req, res) => {
         success: true,
         message: "Signout Successful"
     });
-<<<<<<< HEAD
 }
 
 
@@ -525,6 +501,3 @@ console.timeEnd('roleQuery');
         return next(errorHandler(500, "Server error"));
     }
 };
-=======
-}
->>>>>>> a66626c24a50781b35aa2c580b56b07ccba5d938
